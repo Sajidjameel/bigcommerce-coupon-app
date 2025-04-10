@@ -2,133 +2,219 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { cookies } from "next/headers";
 
+// ENV VARS
 const STORE_HASH = process.env.BIGCOMMERCE_STORE_HASH!;
 const BASE_URL = `https://api.bigcommerce.com/stores/${STORE_HASH}/v3/promotions`;
 
+// Types
+interface PromotionRequestBody {
+    name?: string;
+    displayName?: string;
+    startDate?: string;
+    endDate?: string;
+    canBeUsedWithOtherPromotions?: boolean;
+    maxUses?: number;
+    maxUsesPerCustomer?: number;
+    minOrderCount?: number;
+    discountType: "percentage_discount" | "fixed_amount";
+    discountAmount: number;
+    excludeSaleItems?: boolean;
+    strategy?: string;
+    categories?: string[] | number[];
+    customerGroupIds?: string | string[];
+    excludedCustomerGroupIds?: string | string[];
+    quantity?: number;
+}
+
+interface CouponCodeResponse {
+    data?: {
+        id: number;
+        code: string;
+        max_uses: number;
+        max_uses_per_customer: number;
+        [key: string]: unknown;
+    };
+    [key: string]: unknown;
+}
+
+// Helpers
 async function generateUniqueCode(): Promise<string> {
     return crypto.randomBytes(5).toString("hex").toUpperCase();
 }
 
-// Define a type for the function parameters
-interface CouponPayloadParams {
-    code: string;
-    discountAmount: number;
-    discountType: "percentage_discount" | "fixed_amount";
-    appliesTo: number[];
-    maxUses: number;
-    excludeSaleItems: boolean;
-    excludedCategories: number[];
-}
-
-// Define a type for the API request body
-interface CouponRequestBody {
-    discountAmount: number;
-    discountType: "percentage_discount" | "fixed_amount";
-    appliesTo: number[];
-    maxUses: number;
-    excludeSaleItems: boolean;
-    excludedCategories: number[];
-}
-
-// Define the response type for `createPromotion`
-interface PromotionResponse {
-    data?: { id: number };
-    errors?: unknown;
-}
-
-function generateCouponPayload({
-    code = "",
-    discountAmount = 5,
-    discountType = "percentage_discount",
-    appliesTo = [],
-    maxUses = 1,
-    excludeSaleItems = true,
-    excludedCategories = [],
-}: CouponPayloadParams) {
-    const itemsField = excludedCategories.length > 0 
-        ? { not: { categories: excludedCategories } } 
-        : undefined; // Do not include `not` if there are no excluded categories
-
-    return {
-        name: code,
+async function createCouponCode(
+    promotionId: number,
+    code: string,
+    accessToken: string
+): Promise<CouponCodeResponse> {
+    const couponPayload = {
         code: code,
-        redemption_type: "COUPON",
-        type: discountType,
-        amount: discountAmount,
-        applies_to: { entity: "products", ids: appliesTo },
-        enabled: true,
-        can_be_used_with_other_promotions: false,
-        currency_code: "*",
-        channels: [],
-        max_uses: maxUses,
-        rules: [
-            {
-                action: {
-                    cart_items: {
-                        add_free_item: false,
-                        discount: {
-                            percentage_amount: discountType === "percentage_discount" ? discountAmount : undefined,
-                            fixed_amount: discountType === "fixed_amount" ? discountAmount : undefined,
-                        },
-                        exclude_items_on_sale: excludeSaleItems,
-                        include_items_considered_by_condition: true,
-                        items: itemsField, // Conditionally include `not`
-                        strategy: "LEAST_EXPENSIVE",
-                    },
-                },
-                apply_once: true,
-                stop: false,
-            },
-        ],
+        max_uses: 1,
+        max_uses_per_customer: 1
     };
+
+    const couponResponse = await fetch(
+        `https://api.bigcommerce.com/stores/${STORE_HASH}/v3/promotions/${promotionId}/codes`,
+        {
+            method: "POST",
+            headers: {
+                "X-Auth-Token": accessToken,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(couponPayload)
+        }
+    );
+
+    return await couponResponse.json();
 }
 
-async function createPromotion(payload: object, accessToken: string): Promise<PromotionResponse> {
-    const response = await fetch(BASE_URL, {
-        method: "POST",
-        headers: {
-            "X-Auth-Token": accessToken,
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-    });
-
-    return response.json() as Promise<PromotionResponse>;
-}
-
-export async function POST(req: Request) {
+// Route Handler
+export async function POST(req: Request): Promise<NextResponse> {
     try {
         const cookieStore = await cookies();
-        // const accessToken = process.env.BIGCOMMERCE_ACCESS_TOKEN;
         const accessToken = cookieStore.get("bigcommerce_access_token")?.value;
+
+        // const accessToken = "l6723djf2ubh28oa4df6wfcon6duyln"; // Replace with valid token in production
+
         if (!accessToken) {
-            return NextResponse.json({ error: "Missing access token. Please log in again." }, { status: 401 });
+            return NextResponse.json(
+                { error: "Missing access token. Please log in again." },
+                { status: 401 }
+            );
         }
 
-        const body: CouponRequestBody = await req.json();
-        const code = await generateUniqueCode();
+        const body: PromotionRequestBody = await req.json();
 
-        const payload = generateCouponPayload({
-            code,
-            discountAmount: body.discountAmount,
-            discountType: body.discountType,
-            appliesTo: body.appliesTo,
-            maxUses: body.maxUses,
-            excludeSaleItems: body.excludeSaleItems,
-            excludedCategories: body.excludedCategories,
-        });
+        const quantity = Number(body.quantity) > 0 ? Number(body.quantity) : 1;
 
-        console.log("Payload: ", payload);
+        const codes: string[] = [];
 
-        const promoResponse = await createPromotion(payload, accessToken);
-        console.log("Promotion Response: ", promoResponse);
-        if (!promoResponse.data?.id) throw new Error("Failed to create promotion");
+        for (let i = 0; i < quantity; i++) {
+            
+            const code = await generateUniqueCode();
+            // const now = new Date();
+    
+            // const startDate = body.startDate ? new Date(body.startDate).toISOString() : now.toISOString();
+            const endDate = body.endDate ? new Date(body.endDate).toISOString() : null;
+    
+            const customerGroupIds = Array.isArray(body.customerGroupIds)
+                ? body.customerGroupIds
+                    .map(id => String(id).trim()) // ✅ Convert to string first
+                    .filter(id => id !== "")
+                : typeof body.customerGroupIds === "string"
+                ? body.customerGroupIds
+                    .split(",")
+                    .map(id => id.trim())
+                    .filter(id => id !== "")
+                : [];
+    
+            // const excludedCustomerGroupIds = Array.isArray(body.excludedCustomerGroupIds)
+            //     ? body.excludedCustomerGroupIds
+            //         .map(id => String(id).trim())
+            //         .filter(id => id !== "")
+            //     : typeof body.excludedCustomerGroupIds === "string"
+            //     ? body.excludedCustomerGroupIds
+            //         .split(",")
+            //         .map(id => id.trim())
+            //         .filter(id => id !== "")
+            //     : [];
+            
+    
+            // if (customerGroupIds.length > 0 && excludedCustomerGroupIds.length > 0) {
+            //     return NextResponse.json(
+            //         {
+            //             error: "You can only provide either 'customerGroupIds' or 'excludedCustomerGroupIds', not both."
+            //         },
+            //         { status: 400 }
+            //     );
+            // }
+    
+            const finalCustomerGroupIds = customerGroupIds.map(Number);
+            // const finalExcludedCustomerGroupIds = excludedCustomerGroupIds.map(Number);
+    
+            const payload = {
+                redemption_type: "COUPON",
+                name: body.name || code,
+                status: "ENABLED",
+                end_date: endDate,
+                created_from: "react_ui",
+                display_name: body.displayName?.trim() || "",
+                coupon_overrides_automatic_when_offering_higher_discounts: false,
+                can_be_used_with_other_promotions: body.canBeUsedWithOtherPromotions ?? true,
+                currency_code: "*",
+                max_uses: body.maxUses ?? "1",
+                codes: {
+                    code: code,
+                    max_uses_per_customer: body.maxUsesPerCustomer ?? null
+                },
+                channels: [],
+                customer: {
+                    group_ids: finalCustomerGroupIds.length > 0 ? finalCustomerGroupIds : undefined,
+                    // excluded_group_ids: finalExcludedCustomerGroupIds.length > 0 ? finalExcludedCustomerGroupIds : undefined,
+                    minimum_order_count: body.minOrderCount ?? 0,
+                    segments: null
+                },
+                rules: [
+                    {
+                        apply_once: true,
+                        stop: false,
+                        action: {
+                            cart_items: {
+                                add_free_item: false,
+                                discount: {
+                                    percentage_amount: body.discountType === "percentage_discount" ? body.discountAmount : undefined,
+                                    fixed_amount: body.discountType === "fixed_amount" ? body.discountAmount : undefined
+                                },
+                                exclude_items_on_sale: body.excludeSaleItems ?? true,
+                                include_items_considered_by_condition: true,
+                                items: {
+                                    categories: body.categories?.map((id: string | number) => Number(id)) ?? []
+                                },
+                                strategy: body.strategy ?? "LEAST_EXPENSIVE"
+                            }
+                        }
+                    }
+                ]
+            };
+    
+            // console.log("Generated Payload:", payload);
+    
+            const response = await fetch(BASE_URL, {
+                method: "POST",
+                headers: {
+                    "X-Auth-Token": accessToken,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(payload)
+            });
+    
+            const data = await response.json() as {
+                data?: {
+                    id?: number;
+                };
+                [key: string]: unknown;
+            };        
+    
+            if (!response.ok || !data.data?.id) {
+                console.error("BigCommerce error:", data);
+                return NextResponse.json({ error: "Failed to create promotion." }, { status: 500 });
+            }
+    
+            const promotionId = data.data.id;
+            const couponResponse = await createCouponCode(promotionId, code, accessToken);
+    
+            if (!couponResponse.data?.id) {
+                console.error("Failed to create coupon code:", couponResponse);
+                return NextResponse.json({ error: "Failed to create coupon code." }, { status: 500 });
+            }
+    
+            codes.push(code)
+            
+        }
 
-        return NextResponse.json({ message: "Coupon created", coupon: code });
-    } catch (error: unknown) {
-        console.error("Coupon creation error:", error);
-        return NextResponse.json({ 
-            error: error instanceof Error ? error.message : "An unknown error occurred" 
-        }, { status: 500 });
+        return NextResponse.json({ message: "Coupon created", coupon: codes });
+    } catch (error) {
+        console.error("Server error:", error);
+        return NextResponse.json({ error: "An unexpected error occurred." }, { status: 500 });
     }
 }
