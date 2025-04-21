@@ -1,0 +1,209 @@
+"use client"
+import { type ExclusionRule, PRODUCT_INCLUSION_OPTIONS } from "@/types/rule-types"
+import { Search, Trash2 } from "lucide-react"
+
+// Exclusion options - same as inclusion but without "all" option
+const PRODUCT_EXCLUSION_OPTIONS = PRODUCT_INCLUSION_OPTIONS.filter((option) => option.value !== "all")
+
+// Options for additional exclusion rules (no "individual" option)
+const ADDITIONAL_EXCLUSION_OPTIONS = PRODUCT_EXCLUSION_OPTIONS.filter((option) => option.value !== "individual")
+
+interface ProductExclusionRuleProps {
+  rules: ExclusionRule[]
+  onRulesChange: (rules: ExclusionRule[]) => void
+}
+
+export function ProductExclusionRule({ rules, onRulesChange }: ProductExclusionRuleProps) {
+  const handleTypeChange = (index: number, type: string) => {
+    let updatedRules = [...rules]
+
+    // If changing the first rule, reset all additional rules
+    if (index === 0) {
+      // Keep only the first rule with the new type
+      updatedRules = [
+        {
+          ...updatedRules[0],
+          type,
+          value: "",
+          selector: "",
+        },
+      ]
+    } else {
+      // Just update the specific rule
+      updatedRules[index] = {
+        ...updatedRules[index],
+        type,
+        value: "",
+        selector: "",
+      }
+    }
+
+    onRulesChange(updatedRules)
+  }
+
+  const handleSelectorChange = (index: number, selector: string) => {
+    const updatedRules = [...rules]
+    updatedRules[index] = {
+      ...updatedRules[index],
+      selector,
+    }
+    onRulesChange(updatedRules)
+  }
+
+  const handleAddExclusionRule = () => {
+    onRulesChange([...rules, { id: `exclusion-${Date.now()}`, type: "please_select", value: "", selector: "" }])
+  }
+
+  const handleDeleteExclusionRule = (index: number) => {
+    const updatedRules = [...rules]
+    updatedRules.splice(index, 1)
+    onRulesChange(updatedRules)
+  }
+
+  // Get placeholder text based on rule type
+  const getPlaceholderText = (type: string) => {
+    switch (type) {
+      case "individual":
+        return "Click to open product selector"
+      case "category":
+        return "Click to open category selector"
+      case "brand":
+        return "Click to open brand selector"
+      case "custom_field":
+        return "Click to open field selector"
+      case "product_option":
+        return "Click to open option selector"
+      default:
+        return "Click to select"
+    }
+  }
+
+  // Check if a specific type is already selected
+  const isTypeSelected = (type: string) => {
+    return rules.some((rule) => rule.type === type)
+  }
+
+  // Check if the first rule is "individual"
+  const isFirstRuleIndividual = rules.length > 0 && rules[0].type === "individual"
+
+  // Get available options for a specific rule
+  const getAvailableOptions = (currentIndex: number) => {
+    // Get the current rule's type
+    const currentType = rules[currentIndex]?.type
+
+    // For the first rule, show all options
+    if (currentIndex === 0) {
+      return PRODUCT_EXCLUSION_OPTIONS
+    }
+
+    // Start with the "please_select" option for additional rules
+    const options = currentType === "please_select" ? [{ value: "please_select", label: "Please select a value" }] : []
+
+    // Add the filtered product options
+    const filteredOptions = ADDITIONAL_EXCLUSION_OPTIONS.filter((option) => {
+      // If this is the current rule with this type, include it
+      if (option.value === currentType) return true
+
+      // If the type is "category" or "brand", only include if not already selected
+      if ((option.value === "category" || option.value === "brand") && isTypeSelected(option.value)) {
+        return false
+      }
+
+      // Include all other options
+      return true
+    })
+
+    return [...options, ...filteredOptions]
+  }
+
+  // Determine if we should show the "Add another exclusion rule" button
+  // Only show if all rules have valid selections and first rule is not "individual"
+  const showAddButton =
+    rules.length > 0 &&
+    !isFirstRuleIndividual &&
+    !rules.some((rule) => rule.type === "please_select") &&
+    rules.every((rule) => rule.type !== "")
+
+  return (
+    <div className="space-y-4">
+      {rules.length === 0 ? (
+        <button type="button" onClick={handleAddExclusionRule} className="cursor-pointer text-blue-600 hover:text-blue-800 text-sm">
+          + Add exclusion rule
+        </button>
+      ) : (
+        <>
+          {rules.map((rule, index) => (
+            <div key={rule.id} className={index === 0 ? "flex items-center gap-2" : "flex items-center gap-2 ml-4"}>
+              {index === 0 ? (
+                <>
+                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                  <span className="cursor-pointer text-sm">Excluding products</span>
+                </>
+              ) : (
+                <span className="text-sm">And</span>
+              )}
+
+              <div className="relative">
+                <select
+                  className="appearance-none border border-gray-300 rounded px-3 py-2 pr-8 text-sm bg-white w-48"
+                  value={rule.type}
+                  onChange={(e) => handleTypeChange(index, e.target.value)}
+                  disabled={index > 0 && isFirstRuleIndividual}
+                >
+                  {getAvailableOptions(index).map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                  <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                  </svg>
+                </div>
+              </div>
+
+              {rule.type !== "please_select" && (
+                <div className="relative flex-1 max-w-xs">
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <Search className="w-4 h-4 text-gray-500" />
+                  </div>
+                  <input
+                    type="text"
+                    className="w-full border border-gray-300 rounded pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder={getPlaceholderText(rule.type)}
+                    value={rule.selector || ""}
+                    onChange={(e) => handleSelectorChange(index, e.target.value)}
+                    disabled={index > 0 && isFirstRuleIndividual}
+                  />
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => handleDeleteExclusionRule(index)}
+                className="text-blue-600 hover:text-blue-800"
+                disabled={index > 0 && isFirstRuleIndividual}
+              >
+                <Trash2 className={`w-5 h-5 ${index > 0 && isFirstRuleIndividual ? "opacity-50" : ""}`} />
+              </button>
+            </div>
+          ))}
+
+          {/* Add another exclusion rule button */}
+          {showAddButton && (
+            <div className="ml-4">
+              <button
+                type="button"
+                onClick={handleAddExclusionRule}
+                className="cursor-pointer text-blue-600 hover:text-blue-800 text-sm"
+              >
+                + Add another exclusion rule
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}

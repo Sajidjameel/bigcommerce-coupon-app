@@ -1,0 +1,262 @@
+"use client"
+import { type InclusionRule, PRODUCT_INCLUSION_OPTIONS } from "@/types/rule-types"
+import { Search, Trash2 } from "lucide-react"
+
+// Convert the inclusion rule with additionalConditions to an array of rules
+interface ProductInclusionRuleProps {
+  rule: InclusionRule
+  onRuleChange: (rule: InclusionRule) => void
+}
+
+interface RuleItem {
+  id: string
+  type: string
+  value: string
+  selector: string
+}
+
+
+export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRuleProps) {
+  // Convert the inclusion rule structure to an array format for easier handling
+  const inclusionRules = [
+    { id: rule.id, type: rule.type, value: rule.value || "", selector: rule.selector || "" },
+    ...(rule.additionalConditions || []).map((condition) => ({
+      id: condition.id,
+      type: condition.type,
+      value: condition.value || "",
+      selector: condition.selector || "",
+    })),
+  ]
+
+  const handleTypeChange = (index: number, type: string) => {
+    let updatedRules = [...inclusionRules]
+
+    // If changing the first rule, reset all additional rules
+    if (index === 0) {
+      // Keep only the first rule with the new type
+      updatedRules = [
+        {
+          ...updatedRules[0],
+          type,
+          value: "",
+          selector: "",
+        },
+      ]
+    } else {
+      // Just update the specific rule
+      updatedRules[index] = {
+        ...updatedRules[index],
+        type,
+        value: "",
+        selector: "",
+      }
+    }
+
+    // Convert back to the original structure
+    updateOriginalStructure(updatedRules)
+  }
+
+  const handleSelectorChange = (index: number, selector: string) => {
+    const updatedRules = [...inclusionRules]
+    updatedRules[index] = {
+      ...updatedRules[index],
+      selector,
+    }
+    updateOriginalStructure(updatedRules)
+  }
+
+  const handleAddInclusionRule = () => {
+    const updatedRules = [
+      ...inclusionRules,
+      { id: `inclusion-${Date.now()}`, type: "please_select", value: "", selector: "" },
+    ]
+    updateOriginalStructure(updatedRules)
+  }
+
+  const handleDeleteInclusionRule = (index: number) => {
+    const updatedRules = [...inclusionRules]
+    updatedRules.splice(index, 1)
+    updateOriginalStructure(updatedRules)
+  }
+
+  // Convert the array structure back to the original inclusion rule structure
+  const updateOriginalStructure = (rules: RuleItem[]) => {
+    if (rules.length === 0) {
+      onRuleChange({
+        ...rule,
+        type: "individual", // Default type
+        value: "",
+        selector: "",
+        additionalConditions: [],
+      })
+      return
+    }
+
+    const [mainRule, ...additionalRules] = rules
+    onRuleChange({
+      ...rule,
+      type: mainRule.type,
+      value: mainRule.value,
+      selector: mainRule.selector,
+      additionalConditions: additionalRules.map((r) => ({
+        id: r.id,
+        type: r.type,
+        value: r.value,
+        selector: r.selector,
+      })),
+    })
+  }
+
+  // Get placeholder text based on rule type
+  const getPlaceholderText = (type: string) => {
+    switch (type) {
+      case "individual":
+        return "Click to open product selector"
+      case "category":
+        return "Click to open category selector"
+      case "brand":
+        return "Click to open brand selector"
+      case "custom_field":
+        return "Click to open field selector"
+      case "product_option":
+        return "Click to open option selector"
+      default:
+        return "Click to select"
+    }
+  }
+
+  // Check if a specific type is already selected
+  const isTypeSelected = (type: string) => {
+    return inclusionRules.some((rule) => rule.type === type)
+  }
+
+  // Check if the first rule is "individual" or "all"
+  const isFirstRuleIndividualOrAll =
+    inclusionRules.length > 0 && (inclusionRules[0].type === "individual" || inclusionRules[0].type === "all")
+
+  // Get available options for a specific rule
+  const getAvailableOptions = (currentIndex: number) => {
+    // Get the current rule's type
+    const currentType = inclusionRules[currentIndex]?.type
+
+    // For the first rule, show all options
+    if (currentIndex === 0) {
+      return PRODUCT_INCLUSION_OPTIONS
+    }
+
+    // Start with the "please_select" option for additional rules
+    const options = currentType === "please_select" ? [{ value: "please_select", label: "Please select a value" }] : []
+
+    // Add the filtered product options
+    const filteredOptions = PRODUCT_INCLUSION_OPTIONS.filter((option) => {
+      // If this is the current rule with this type, include it
+      if (option.value === currentType) return true
+
+      // Don't show "individual" or "all" for additional rules
+      if (option.value === "individual" || option.value === "all") return false
+
+      // If the type is "category" or "brand", only include if not already selected
+      if ((option.value === "category" || option.value === "brand") && isTypeSelected(option.value)) {
+        return false
+      }
+
+      // Include all other options
+      return true
+    })
+
+    return [...options, ...filteredOptions]
+  }
+
+  // Determine if we should show the "Add another inclusion rule" button
+  // Only show if all rules have valid selections and first rule is not "individual" or "all"
+  const showAddButton =
+    inclusionRules.length > 0 &&
+    !isFirstRuleIndividualOrAll &&
+    !inclusionRules.some((rule) => rule.type === "please_select") &&
+    inclusionRules.every((rule) => rule.type !== "")
+
+  return (
+    <div className="space-y-4">
+      {inclusionRules.length === 0 ? (
+        <button type="button" onClick={handleAddInclusionRule} className="hover:cursor-pointer text-blue-600 hover:text-blue-800 text-sm">
+          + Add inclusion rule
+        </button>
+      ) : (
+        <>
+          {inclusionRules.map((rule, index) => (
+            <div key={rule.id} className={index === 0 ? "flex items-center gap-2" : "flex items-center gap-2 ml-4"}>
+              {index === 0 ? (
+                <>
+                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                  <span className="text-sm">Including products</span>
+                </>
+              ) : (
+                <span className="text-sm">And</span>
+              )}
+
+              <div className="relative">
+                <select
+                  className="appearance-none border border-gray-300 rounded px-3 py-2 pr-8 text-sm bg-white w-48"
+                  value={rule.type}
+                  onChange={(e) => handleTypeChange(index, e.target.value)}
+                  disabled={index > 0 && isFirstRuleIndividualOrAll}
+                >
+                  {getAvailableOptions(index).map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                  <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                  </svg>
+                </div>
+              </div>
+
+              {rule.type !== "please_select" && rule.type !== "all" && (
+                <div className="relative flex-1 max-w-xs">
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <Search className="w-4 h-4 text-gray-500" />
+                  </div>
+                  <input
+                    type="text"
+                    className="w-full border border-gray-300 rounded pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder={getPlaceholderText(rule.type)}
+                    value={rule.selector || ""}
+                    onChange={(e) => handleSelectorChange(index, e.target.value)}
+                    disabled={index > 0 && isFirstRuleIndividualOrAll}
+                  />
+                </div>
+              )}
+
+              {index > 0 && (
+                <button
+                  type="button"
+                  onClick={() => handleDeleteInclusionRule(index)}
+                  className="text-blue-600 hover:text-blue-800"
+                  disabled={index > 0 && isFirstRuleIndividualOrAll}
+                >
+                  <Trash2 className={`w-5 h-5 ${index > 0 && isFirstRuleIndividualOrAll ? "opacity-50" : ""}`} />
+                </button>
+              )}
+            </div>
+          ))}
+
+          {/* Add another inclusion rule button */}
+          {showAddButton && (
+            <div className="ml-4">
+              <button
+                type="button"
+                onClick={handleAddInclusionRule}
+                className="cursor-pointer text-blue-600 hover:text-blue-800 text-sm"
+              >
+                + Add another inclusion rule
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
