@@ -1,31 +1,45 @@
-// pages/api/currencies.ts
-import type { NextApiRequest, NextApiResponse } from 'next';
+import { NextResponse } from 'next/server';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const storeHash = process.env.BIGCOMMERCE_STORE_HASH!;
-  const accessToken = process.env.BIGCOMMERCE_ACCESS_TOKEN; // retrieved during OAuth
+export async function GET() {
+  console.log("Fetching currencies..."); // Log to confirm that the endpoint is being hit
 
-  if (!storeHash || !accessToken) {
-    return res.status(401).json({ error: 'Missing store credentials' });
+  const BIGCOMMERCE_STORE_HASH = process.env.BIGCOMMERCE_STORE_HASH;
+  const BIGCOMMERCE_ACCESS_TOKEN = process.env.BIGCOMMERCE_ACCESS_TOKEN;
+
+  if (!BIGCOMMERCE_STORE_HASH || !BIGCOMMERCE_ACCESS_TOKEN) {
+    console.error("Missing BigCommerce credentials");
+    return NextResponse.json(
+      { error: 'Missing BigCommerce credentials in environment variables' },
+      { status: 500 }
+    );
   }
 
   try {
-    const response = await fetch(`https://api.bigcommerce.com/stores/${storeHash}/v2/currencies`, {
-      method: 'GET',
-      headers: {
-        'X-Auth-Token': accessToken,
-        'Content-Type': 'application/json',
-      },
-    });
+    console.log('Making request to BigCommerce API...');
+    const res = await fetch(
+      `https://api.bigcommerce.com/stores/${BIGCOMMERCE_STORE_HASH}/v2/currencies`,
+      {
+        method: 'GET',
+        headers: {
+          'X-Auth-Token': BIGCOMMERCE_ACCESS_TOKEN,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        }
+      }
+    );
 
-    if (!response.ok) {
-      return res.status(response.status).json({ error: await response.text() });
+    console.log('BigCommerce API response status:', res.status); // Log the response status from BigCommerce
+
+    if (!res.ok) {
+      console.error("BigCommerce API error:", res.statusText);
+      return NextResponse.json({ error: "Failed to fetch currencies" }, { status: res.status });
     }
 
-    const data = await response.json();
-    res.status(200).json(data);
+    const data = await res.json();
+    console.log('BigCommerce API response data:', data); // Log the data returned from BigCommerce
+    return NextResponse.json(data);
   } catch (err) {
-    console.log('Error fetching currencies:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error("Internal error:", err); // Log any internal errors
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

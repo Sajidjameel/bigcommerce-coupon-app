@@ -26,6 +26,7 @@ const Targeting = () => {
   const [currencies, setCurrencies] = useState<Record<string, any> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [britishPound, setBritishPound] = useState({ name: "British Pound", currency_code: "GBP" })
 
   const availableRuleTypes: AvailableRuleType[] = [
     { id: "customerGroup", label: "Customer Group" },
@@ -37,11 +38,14 @@ const Targeting = () => {
     const usedTypes = targetingRules.map((rule) => rule.type)
     return availableRuleTypes.filter((type) => !usedTypes.includes(type.id))
   }
-
-  const handleCurrencyChange = (value: string) => {
-    setCurrency(value)
-    setShowCurrencyDropdown(false)
+  const handleCurrencyChange = (newCurrency: string) => {
+    setCurrency(newCurrency)
   }
+
+  // const handleCurrencyChange = (value: string) => {
+  //   setCurrency(value)
+  //   setShowCurrencyDropdown(false)
+  // }
 
   const addTargetingRule = () => {
     if (targetingRules.length < 3) {
@@ -108,32 +112,44 @@ const Targeting = () => {
         return "Select a value"
     }
   }
-
   useEffect(() => {
     const fetchCurrencies = async () => {
+      setLoading(true)
       try {
-        const response = await fetch('/api/currency', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({})
-        });
+        console.log("Fetching currencies from API...")
+        const response = await fetch("/api/currency")
+        console.log("API response status:", response.status)
 
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        const data = await response.json();
-        console.log('Currency data:', data);
-        setCurrencies(data);
-        setLoading(false);
+        if (!response.ok) {
+          console.error("Failed to fetch currencies. Status:", response.status)
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const data = await response.json()
+        console.log("Currency data:", data)
+
+        // Extract the British Pound name from the array
+        const gbp = data.find((currency: any) => currency.currency_code === "GBP")
+        if (gbp) {
+          console.log("British Pound Name:", gbp.name)
+          setBritishPound(gbp)
+          setCurrency(gbp.name) // Set as default selected value
+        }
+
+        //setCurrencies(data); // Save full list if you're rendering a dropdown
       } catch (err) {
-        console.error('Fetch error:', err);
-        setError('Failed to fetch currencies.');
-        setLoading(false);
+        console.error("Fetch error:", err)
+        setError("Failed to fetch currencies.")
+      } finally {
+        setLoading(false)
       }
-    };
+    }
 
-    fetchCurrencies();
+    fetchCurrencies()
   }, [])
+  
+  
+  
 
   return (
     <div className="bg-white rounded-none shadow p-6">
@@ -170,7 +186,7 @@ const Targeting = () => {
                     className="flex items-center w-full cursor-pointer px-4 py-2 text-sm text-left hover:bg-gray-100"
                     onClick={() => handleCurrencyChange("British Pound")}
                   >
-                    <span className="flex-grow">British Pound</span>
+                    <span className="flex-grow">{ britishPound.name}</span>
                     {currency === "British Pound" && (
                       <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />

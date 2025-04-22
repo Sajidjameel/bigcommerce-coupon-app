@@ -128,7 +128,7 @@ export default function CouponGenerator() {
 
     return (
         <>
-            <div className="bg-white rounded-none border border-gray-200 p-8">
+            <div className="bg-white rounded-none border border-gray-200 p-8 text-gray-700">
                 <h2 className="text-xl font-semibold mb-6">Edit Promotion</h2>
 
                 <div className="space-y-8">

@@ -76,7 +76,7 @@ export type Rule = {
     disabled?: boolean
   }
   
-  export const CONDITION_OPTIONS: ConditionOption[] = [
+  export const CONDITION_OPTIONS: ConditionOption[] = [ 
     { value: "please_select", label: "Please select a value", disabled: true },
     { value: "buys_products", label: "Buys Products" },
     { value: "reaches_subtotal", label: "Reaches an order sub-total" },
@@ -144,3 +144,29 @@ export type Rule = {
     { value: "most_expensive", label: "Most expensive" },
   ]
   
+
+
+  // types/currency.ts
+export interface Currency {
+  id: number;
+  defaultName: string;
+  name: string;
+  code: string;
+  symbol: string;
+  symbolLocation: string;
+  decimalSeparator: string;
+  decimalPlaces: number;
+  thousandsSeparator: string;
+  exchangeRate: number;
+  isExchangeRateAutoUpdated: boolean;
+  isTransactional: boolean;
+  isEnabled: boolean;
+  isDefault: boolean;
+  useDefaultName: boolean;
+  countries: any[]; // You can further type this if needed
+}
+
+export interface CurrenciesResponse {
+  data: Currency[];
+  meta: Record<string, unknown>;
+}
