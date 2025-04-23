@@ -1,35 +1,65 @@
-// pages/api/customer-groups.ts
-import type { NextApiRequest, NextApiResponse } from 'next';
+import { NextResponse } from 'next/server'
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-    const BIGCOMMERCE_STORE_HASH = process.env.BIGCOMMERCE_STORE_HASH;
-    const BIGCOMMERCE_ACCESS_TOKEN = process.env.BIGCOMMERCE_ACCESS_TOKEN;
+export async function GET() {
+  const BIGCOMMERCE_STORE_HASH = process.env.BIGCOMMERCE_STORE_HASH
+  const BIGCOMMERCE_ACCESS_TOKEN = process.env.BIGCOMMERCE_ACCESS_TOKEN
 
-    if (!BIGCOMMERCE_STORE_HASH || !BIGCOMMERCE_ACCESS_TOKEN) {
-        return res.status(500).json({ error: 'Missing BigCommerce credentials in environment variables' });
+  // Validate environment variables
+  if (!BIGCOMMERCE_STORE_HASH || !BIGCOMMERCE_ACCESS_TOKEN) {
+    return NextResponse.json(
+      { error: "Missing BigCommerce credentials" },
+      { status: 500 }
+    )
+  }
+
+  const url = `https://api.bigcommerce.com/stores/${BIGCOMMERCE_STORE_HASH}/v2/customer_groups`
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        "X-Auth-Token": BIGCOMMERCE_ACCESS_TOKEN,
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+      },
+    })
+
+    const rawResponse = await response.text()
+    console.log('RAW API RESPONSE:', rawResponse || '(empty response)')
+
+    if (!response.ok) {
+      console.error('API ERROR STATUS:', response.status)
+      return NextResponse.json(
+        { error: rawResponse || `API Error ${response.status}` },
+        { status: response.status }
+      )
     }
 
-    const url = `https://api.bigcommerce.com/stores/${BIGCOMMERCE_STORE_HASH}/v3/customergroups?limit=250&page=1`;
+    // Handle empty response
+    if (!rawResponse) {
+      console.warn('Received empty response from API')
+      return NextResponse.json(
+        { data: [] }, // Return empty array as default
+        { status: 200 }
+      )
+    }
 
+    // Try to parse JSON only if response exists
     try {
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'X-Auth-Token': BIGCOMMERCE_ACCESS_TOKEN,
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            }
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            return res.status(response.status).json({ error: data.title || 'Failed to fetch customer groups' });
-        }
-
-        res.status(200).json(data);
-    } catch (err) {
-        console.error('Customer groups API error:', err);
-        res.status(500).json({ error: 'Internal server error' });
+      const jsonData = JSON.parse(rawResponse)
+      return NextResponse.json(jsonData, { status: 200 })
+    } catch (parseError) {
+      console.error('JSON PARSE ERROR:', parseError)
+      return NextResponse.json(
+        { error: "Invalid API response format", rawResponse },
+        { status: 500 }
+      )
     }
+    
+  } catch (err) {
+    console.error('NETWORK ERROR:', err)
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    )
+  }
 }

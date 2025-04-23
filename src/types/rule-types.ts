@@ -35,7 +35,34 @@ export type Rule = {
       rewardExclusionRules?: ExclusionRule[]
     }
   }
+
+
+  /**
+ * Product interface representing a BigCommerce product
+ */
+export interface Product {
+  id: number
+  name: string
+  sku: string
+  price: number
+  primary_image: {
+    url_standard: string
+  } | null
+}
+
+/**
+ * Pagination interface for API responses
+ */
+export interface Pagination {
+  total_pages: number
+  current_page: number
+  total: number
+  count: number
+}
+
   
+
+
   export type InclusionRule = {
     id: string
     type: string // "individual", "all", "category", "brand", "custom_field", "product_option"

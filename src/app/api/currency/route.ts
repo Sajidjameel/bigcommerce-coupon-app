@@ -28,7 +28,7 @@ export async function GET() {
       }
     );
 
-    console.log('BigCommerce API response status:', res.status); // Log the response status from BigCommerce
+    //console.log('BigCommerce API response status:', res.status); // Log the response status from BigCommerce
 
     if (!res.ok) {
       console.error("BigCommerce API error:", res.statusText);

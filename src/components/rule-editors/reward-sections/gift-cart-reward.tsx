@@ -1,20 +1,45 @@
 "use client"
 
+import { useState } from "react"
 import type { Rule } from "@/types/rule-types"
-import { MinusCircle, PlusCircle, Search } from "lucide-react"
+import type { Product } from "@/types/rule-types"
+import { QuantitySelector } from "@/components/UI/Quantity-selector"
+import { ProductSelector } from "@/components/UI/Product-selector"
+import { ProductSearchModal } from "@/components/UI/Product-search-modal"
 
 interface GiftCartRewardProps {
   rule: Rule
   onConfigChange: (field: string, value: any) => void
 }
 
+/**
+ * Component for configuring a gift cart reward rule
+ * Allows selecting a product and quantity to add to the customer's cart for free
+ */
 export function GiftCartReward({ rule, onConfigChange }: GiftCartRewardProps) {
+  // Extract values from rule config or use defaults
   const giftQuantity = rule?.config?.giftQuantity ?? 1
   const giftProduct = rule?.config?.giftProduct ?? ""
 
-  const handleGiftQuantityChange = (increment: boolean) => {
-    const newQuantity = increment ? giftQuantity + 1 : Math.max(1, giftQuantity - 1)
+  // Component state
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
+  const [showProductModal, setShowProductModal] = useState(false)
+
+  /**
+   * Handles quantity changes
+   */
+  const handleGiftQuantityChange = (newQuantity: number) => {
     onConfigChange("giftQuantity", newQuantity)
+  }
+
+  /**
+   * Handles product selection
+   */
+  const handleProductSelect = (product: Product) => {
+    console.log("Selected product:", product)
+    setSelectedProduct(product)
+    onConfigChange("giftProduct", product.sku)
+    setShowProductModal(false)
   }
 
   return (
@@ -22,44 +47,19 @@ export function GiftCartReward({ rule, onConfigChange }: GiftCartRewardProps) {
       <div className="w-2 h-2 bg-yellow-500 rounded-full" />
       <span className="text-sm">Include</span>
 
-      <div className="flex items-center border border-gray-300 rounded">
-        <button
-          type="button"
-          onClick={() => handleGiftQuantityChange(false)}
-          disabled={giftQuantity <= 1}
-          className={`px-2 py-1 ${
-            giftQuantity <= 1 ? "text-gray-300 cursor-not-allowed" : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          <MinusCircle className={` cursor-pointer w-4 h-4 ${giftQuantity <= 1 ? "text-gray-300" : "text-blue-600"}`} />
-        </button>
-        <input
-          type="text"
-          className="w-8 text-center border-0 focus:ring-0"
-          value={giftQuantity}
-          readOnly
-        />
-        <button
-          type="button"
-          onClick={() => handleGiftQuantityChange(true)}
-          className="px-2 py-1 text-gray-500 hover:text-gray-700"
-        >
-          <PlusCircle className="cursor-pointer w-4 h-4 text-blue-600" />
-        </button>
-      </div>
+      {/* Quantity Selector Component */}
+      <QuantitySelector quantity={giftQuantity} onChange={handleGiftQuantityChange} />
 
-      <div className="relative flex-1 max-w-xs">
-        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-          <Search className="w-4 h-4 text-gray-500" />
-        </div>
-        <input
-          type="text"
-          className="w-full border border-gray-300 rounded pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-          placeholder="Click to add a single product"
-          value={giftProduct}
-          onChange={(e) => onConfigChange("giftProduct", e.target.value)}
-        />
-      </div>
+      {/* Product Selector Component */}
+      <ProductSelector selectedProduct={selectedProduct} onOpenModal={() => setShowProductModal(true)} />
+
+      {/* Product Search Modal Component */}
+      <ProductSearchModal
+        isOpen={showProductModal}
+        onClose={() => setShowProductModal(false)}
+        onSelect={handleProductSelect}
+        selectedProduct={selectedProduct}
+      />
 
       <span className="text-sm">in the customer&apos;s cart for free.</span>
     </div>

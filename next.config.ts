@@ -5,3 +5,9 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
+
+module.exports = {
+  images: {
+    domains: ['cdn11.bigcommerce.com'],
+  },
+}
