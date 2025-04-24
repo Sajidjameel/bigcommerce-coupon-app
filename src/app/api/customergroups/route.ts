@@ -4,8 +4,13 @@ export async function GET() {
   const BIGCOMMERCE_STORE_HASH = process.env.BIGCOMMERCE_STORE_HASH
   const BIGCOMMERCE_ACCESS_TOKEN = process.env.BIGCOMMERCE_ACCESS_TOKEN
 
-  // Validate environment variables
+  console.log('ENV VARIABLES:', {
+    STORE_HASH: BIGCOMMERCE_STORE_HASH ? '*****' : 'MISSING',
+    ACCESS_TOKEN: BIGCOMMERCE_ACCESS_TOKEN ? '*****' : 'MISSING'
+  })
+
   if (!BIGCOMMERCE_STORE_HASH || !BIGCOMMERCE_ACCESS_TOKEN) {
+    console.error('MISSING CREDENTIALS ERROR')
     return NextResponse.json(
       { error: "Missing BigCommerce credentials" },
       { status: 500 }
@@ -13,6 +18,7 @@ export async function GET() {
   }
 
   const url = `https://api.bigcommerce.com/stores/${BIGCOMMERCE_STORE_HASH}/v2/customer_groups`
+  console.log('API URL:', url)
 
   try {
     const response = await fetch(url, {
@@ -23,8 +29,14 @@ export async function GET() {
       },
     })
 
+    console.log('RESPONSE STATUS:', response.status)
+    console.log('RESPONSE HEADERS:', Object.fromEntries(response.headers.entries()))
+
     const rawResponse = await response.text()
     console.log('RAW API RESPONSE:', rawResponse || '(empty response)')
+    console.log('RESPONSE OK?:', response.ok)
+
+    // Rest of your code remains the same...
 
     if (!response.ok) {
       console.error('API ERROR STATUS:', response.status)

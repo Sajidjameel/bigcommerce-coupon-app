@@ -197,3 +197,23 @@ export interface CurrenciesResponse {
   data: Currency[];
   meta: Record<string, unknown>;
 }
+
+export type RuleTypeId = "customerGroup" | "customerSegment" | "shippingDestination"
+
+export type TargetingRule = {
+  id: string
+  type: RuleTypeId | null
+  condition: string
+  value: string
+  selectedItems?: any[]
+}
+
+export type AvailableRuleType = {
+  id: RuleTypeId
+  label: string
+}
+
+export type CustomerGroup = {
+  id: number
+  name: string
+}

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 export async function GET() {
-  console.log("Fetching currencies..."); // Log to confirm that the endpoint is being hit
+ // console.log("Fetching currencies..."); // Log to confirm that the endpoint is being hit
 
   const BIGCOMMERCE_STORE_HASH = process.env.BIGCOMMERCE_STORE_HASH;
   const BIGCOMMERCE_ACCESS_TOKEN = process.env.BIGCOMMERCE_ACCESS_TOKEN;
@@ -36,7 +36,7 @@ export async function GET() {
     }
 
     const data = await res.json();
-    console.log('BigCommerce API response data:', data); // Log the data returned from BigCommerce
+   // console.log('BigCommerce API response data:', data); // Log the data returned from BigCommerce
     return NextResponse.json(data);
   } catch (err) {
     console.error("Internal error:", err); // Log any internal errors

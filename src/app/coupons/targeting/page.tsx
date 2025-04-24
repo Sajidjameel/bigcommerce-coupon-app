@@ -1,244 +1,67 @@
 "use client"
-
-import { useEffect, useState, useRef } from "react"
-
-type RuleTypeId = "customerGroup" | "customerSegment" | "shippingDestination"
-
-type TargetingRule = {
-  id: string
-  type: RuleTypeId | null
-  condition: string
-  value: string
-  selectedItems?: any[]
-}
-
-type AvailableRuleType = {
-  id: RuleTypeId
-  label: string
-}
-
-type CustomerGroup = {
-  id: number
-  name: string
-}
+import { useTargeting } from "./useTargeting"
+import ShippingDestination from "./shipping-destination"
 
 const Targeting = () => {
-  const [currency, setCurrency] = useState("British Pound")
-  const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false)
-  const [targetingRules, setTargetingRules] = useState<TargetingRule[]>([])
-  const [showRuleDropdown, setShowRuleDropdown] = useState(false)
-  const [activeRuleIndex, setActiveRuleIndex] = useState<number | null>(null)
+  const {
+    currency,
+    showCurrencyDropdown,
+    targetingRules,
+    showRuleDropdown,
+    activeRuleIndex,
+    currencies,
+    loading,
+    error,
+    britishPound,
+    showModal,
+    customerGroups,
+    loadingGroups,
+    selectedGroups,
+    activeRuleId,
+    modalRef,
+    currentPage,
+    pageSize,
+    paginationText,
+    availableRuleTypes,
+    segments,
+    loadingSegments,
+    showShippingDestinationDialog,
+    selectedCountries,
+    getAvailableRuleTypes,
+    getRuleTypeLabel,
+    getPlaceholderForType,
+    handleCurrencyChange,
+    addTargetingRule,
+    removeTargetingRule,
+    updateRuleType,
+    updateRuleCondition,
+    handleInputFocus,
+    applySelectedGroups,
+    applySelectedCountries,
+    toggleGroupSelection,
+    handlePreviousPage,
+    handleNextPage,
+    setShowCurrencyDropdown,
+    setShowRuleDropdown,
+    setActiveRuleIndex,
+    setShowModal,
+    setShowShippingDestinationDialog,
+  } = useTargeting()
 
-  const [currencies, setCurrencies] = useState<Record<string, any> | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
-  const [britishPound, setBritishPound] = useState({ name: "British Pound", currency_code: "GBP" })
+  // Function to render selected countries in the input field
+  const renderSelectedCountriesPreview = (rule: any) => {
+    if (!rule.selectedItems || rule.selectedItems.length === 0) return null
 
-  // New states for customer groups modal
-  const [showModal, setShowModal] = useState(false)
-  const [customerGroups, setCustomerGroups] = useState<CustomerGroup[]>([])
-  const [loadingGroups, setLoadingGroups] = useState(false)
-  const [selectedGroups, setSelectedGroups] = useState<CustomerGroup[]>([])
-  const [activeRuleId, setActiveRuleId] = useState<string | null>(null)
-  const modalRef = useRef<HTMLDivElement>(null)
+    const firstCountry = rule.selectedItems[0]
+    const remainingCount = rule.selectedItems.length - 1
 
-  const availableRuleTypes: AvailableRuleType[] = [
-    { id: "customerGroup", label: "Customer Group" },
-    { id: "customerSegment", label: "Customer Segment" },
-    { id: "shippingDestination", label: "Shipping Destination" },
-  ]
-
-  const getAvailableRuleTypes = (): AvailableRuleType[] => {
-    const usedTypes = targetingRules.map((rule) => rule.type)
-    return availableRuleTypes.filter((type) => !usedTypes.includes(type.id))
-  }
-  const handleCurrencyChange = (newCurrency: string) => {
-    setCurrency(newCurrency)
-    setShowCurrencyDropdown(false)
-  }
-
-  const addTargetingRule = () => {
-    if (targetingRules.length < 3) {
-      setTargetingRules([
-        ...targetingRules,
-        { id: `rule-${Date.now()}`, type: null, condition: "is", value: "", selectedItems: [] },
-      ])
-    }
-  }
-
-  const removeTargetingRule = (id: string) => {
-    setTargetingRules(targetingRules.filter((rule) => rule.id !== id))
-  }
-
-  const updateRuleType = (id: string, type: RuleTypeId) => {
-    setTargetingRules(
-      targetingRules.map((rule) => (rule.id === id ? { ...rule, type, value: "", selectedItems: [] } : rule)),
+    return (
+      <div className="flex items-center gap-2">
+        <div className="bg-gray-200 rounded-md px-2 py-1 text-sm">{firstCountry.name}</div>
+        {remainingCount > 0 && <div className="bg-gray-200 rounded-md px-2 py-1 text-sm">{`+ ${remainingCount}`}</div>}
+      </div>
     )
-    setShowRuleDropdown(false)
   }
-
-  const updateRuleCondition = (id: string, condition: string) => {
-    setTargetingRules(targetingRules.map((rule) => (rule.id === id ? { ...rule, condition } : rule)))
-  }
-
-  const updateRuleValue = (id: string, value: string) => {
-    setTargetingRules(targetingRules.map((rule) => (rule.id === id ? { ...rule, value } : rule)))
-  }
-
-  const getRuleTypeLabel = (type: RuleTypeId | null): string => {
-    if (!type) return "Please select a rule"
-    return availableRuleTypes.find((t) => t.id === type)?.label || "Unknown"
-  }
-
-  // Modified to open modal and fetch data
-  const handleInputFocus = async (ruleId: string, ruleType: RuleTypeId | null) => {
-    if (!ruleType) return
-
-    setActiveRuleId(ruleId)
-
-    // Find the current rule to get its selected items
-    const currentRule = targetingRules.find((rule) => rule.id === ruleId)
-    if (currentRule?.selectedItems) {
-      setSelectedGroups(currentRule.selectedItems)
-    } else {
-      setSelectedGroups([])
-    }
-
-    setShowModal(true)
-
-    if (ruleType === "customerGroup") {
-      fetchCustomerGroups()
-    } else {
-      try {
-        let res: Response | undefined
-        switch (ruleType) {
-          case "customerSegment":
-            res = await fetch("/api/customer-segment")
-            break
-          case "shippingDestination":
-            res = await fetch("/api/shipping-destination")
-            break
-          default:
-            return
-        }
-
-        if (!res.ok) throw new Error("Failed to fetch")
-        const data = await res.json()
-        console.log("Fetched data for", ruleType, data)
-      } catch (err) {
-        console.error("Error fetching rule data:", err)
-      }
-    }
-  }
-
-  // New function to fetch customer groups
-  const fetchCustomerGroups = async () => {
-    setLoadingGroups(true)
-    try {
-      const response = await fetch("/api/customergroups")
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const data = await response.json()
-      setCustomerGroups(data.data || [])
-    } catch (err) {
-      console.error("Error fetching customer groups:", err)
-      setError("Failed to fetch customer groups.")
-    } finally {
-      setLoadingGroups(false)
-    }
-  }
-
-  // Apply selected groups to the rule
-  const applySelectedGroups = () => {
-    if (activeRuleId) {
-      setTargetingRules(
-        targetingRules.map((rule) => {
-          if (rule.id === activeRuleId) {
-            const groupNames = selectedGroups.map((group) => group.name).join(", ")
-            return {
-              ...rule,
-              value: groupNames,
-              selectedItems: selectedGroups,
-            }
-          }
-          return rule
-        }),
-      )
-    }
-    setShowModal(false)
-  }
-
-  // Toggle selection of a customer group
-  const toggleGroupSelection = (group: CustomerGroup) => {
-    if (selectedGroups.some((g) => g.id === group.id)) {
-      setSelectedGroups(selectedGroups.filter((g) => g.id !== group.id))
-    } else {
-      setSelectedGroups([...selectedGroups, group])
-    }
-  }
-
-  const getPlaceholderForType = (type: RuleTypeId | null): string => {
-    switch (type) {
-      case "customerGroup":
-        return "Click to add customer group"
-      case "customerSegment":
-        return "Click to add customer segments"
-      case "shippingDestination":
-        return "Click to add countries"
-      default:
-        return "Select a value"
-    }
-  }
-
-  // Close modal when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
-        setShowModal(false)
-      }
-    }
-
-    if (showModal) {
-      document.addEventListener("mousedown", handleClickOutside)
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [showModal])
-
-  useEffect(() => {
-    const fetchCurrencies = async () => {
-      setLoading(true)
-      try {
-        const response = await fetch("/api/currency")
-
-        if (!response.ok) {
-          console.error("Failed to fetch currencies. Status:", response.status)
-          throw new Error(`HTTP error! status: ${response.status}`)
-        }
-
-        const data = await response.json()
-
-        // Extract the British Pound name from the array
-        const gbp = data.find((currency: any) => currency.currency_code === "GBP")
-        if (gbp) {
-          setBritishPound(gbp)
-          setCurrency(gbp.name) // Set as default selected value
-        }
-      } catch (err) {
-        console.error("Fetch error:", err)
-        setError("Failed to fetch currencies.")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchCurrencies()
-  }, [])
 
   return (
     <div className="bg-white rounded-none shadow p-6">
@@ -380,14 +203,16 @@ const Targeting = () => {
                     />
                   </svg>
                 </div>
-                <input
-                  type="text"
-                  className="w-full border border-gray-300 rounded pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder={getPlaceholderForType(rule.type)}
-                  value={rule.value}
-                  readOnly
+                <div
+                  className="w-full border border-gray-300 rounded pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 cursor-pointer flex items-center min-h-[38px]"
                   onClick={() => handleInputFocus(rule.id, rule.type)}
-                />
+                >
+                  {rule.selectedItems && rule.selectedItems.length > 0 ? (
+                    renderSelectedCountriesPreview(rule)
+                  ) : (
+                    <span className="text-gray-400">{getPlaceholderForType(rule.type)}</span>
+                  )}
+                </div>
               </div>
             )}
 
@@ -421,96 +246,129 @@ const Targeting = () => {
         )}
       </div>
 
-      {/* Customer Groups Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div ref={modalRef} className="bg-white rounded-lg shadow-lg w-full max-w-md mx-4">
-            <div className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Select customer groups</h2>
+      {/* Shipping Destination Dialog */}
+      {showShippingDestinationDialog && (
+        <ShippingDestination
+          isOpen={showShippingDestinationDialog}
+          onClose={() => setShowShippingDestinationDialog(false)}
+          onApply={applySelectedCountries}
+          initialSelectedCountries={selectedCountries}
+        />
+      )}
 
-              <div className="border-t border-b py-2 mb-4">
-                <p className="text-sm">
-                  {loadingGroups ? "Loading customer groups..." : `${customerGroups.length} Customer groups`}
-                </p>
-                <div className="flex justify-between items-center mt-2">
-                  <p className="text-sm text-gray-500">
-                    {customerGroups.length > 0
-                      ? `1 - ${customerGroups.length} of ${customerGroups.length}`
-                      : "1 - 0 of 0"}
-                  </p>
-                  <div className="flex">
-                    <button className="p-2 text-gray-400 border rounded-l" disabled>
-                      &lt;
+      {showModal && (
+        <>
+          {/* Customer Groups Modal */}
+          {activeRuleId && targetingRules.find((r) => r.id === activeRuleId)?.type === "customerGroup" && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div ref={modalRef} className="bg-white rounded-lg shadow-lg w-full max-w-md">
+                <div className="p-6">
+                  <h2 className="text-xl font-semibold mb-4">Select customer groups</h2>
+
+                  <div className="border-t border-b py-2 mb-4">
+                    <p className="text-sm">{loadingGroups ? "" : `${customerGroups.length} Customer groups`}</p>
+                    <div className="flex justify-between items-center mt-2">
+                      <p className="text-sm text-gray-500">{paginationText}</p>
+                      <div className="flex">
+                        <button
+                          className={`p-2 border rounded-l ${currentPage > 0 ? "text-blue-600" : "text-gray-400"} cursor-pointer`}
+                          onClick={handlePreviousPage}
+                          disabled={currentPage === 0}
+                        >
+                          &lt;
+                        </button>
+                        <button className="p-2 text-blue-600 border rounded-r cursor-pointer" onClick={handleNextPage}>
+                          &gt;
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="max-h-60 overflow-y-auto">
+                    {loadingGroups ? (
+                      <p className="text-center py-4">Loading...</p>
+                    ) : customerGroups.length === 0 ? (
+                      <div className="py-4 border-b">
+                        <label className="flex items-center space-x-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className="form-checkbox h-4 w-4 cursor-pointer"
+                            checked={selectedGroups.some((g) => g.name === "-- No Group --")}
+                            onChange={() => toggleGroupSelection({ id: -1, name: "-- No Group --" })}
+                          />
+                          <span className=" text-black px-2 py-1">-- No Group --</span>
+                        </label>
+                      </div>
+                    ) : (
+                      customerGroups.map((group) => (
+                        <div key={group.id} className="py-4 border-b">
+                          <label className="flex items-center space-x-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              className="form-checkbox h-4 w-4"
+                              checked={selectedGroups.some((g) => g.id === group.id)}
+                              onChange={() => toggleGroupSelection(group)}
+                            />
+                            <span>{group.name}</span>
+                          </label>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  <div className="flex justify-end space-x-2 mt-6">
+                    <button
+                      onClick={() => setShowModal(false)}
+                      className="px-4 py-2 text-blue-600 hover:underline cursor-pointer"
+                    >
+                      Cancel
                     </button>
-                    <button className="p-2 text-gray-400 border rounded-r" disabled>
-                      &gt;
+                    <button
+                      onClick={applySelectedGroups}
+                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 cursor-pointer"
+                    >
+                      Apply
                     </button>
                   </div>
                 </div>
               </div>
+            </div>
+          )}
 
-              <div className="max-h-60 overflow-y-auto">
-                {loadingGroups ? (
-                  <p className="text-center py-4">Loading...</p>
-                ) : customerGroups.length === 0 ? (
-                  <div className="py-4 border-b">
-                    <label className="flex items-center space-x-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        className="form-checkbox h-4 w-4"
-                        checked={selectedGroups.some((g) => g.name === "-- No Group --")}
-                        onChange={() => toggleGroupSelection({ id: -1, name: "-- No Group --" })}
-                      />
-                      <span>-- No Group --</span>
-                    </label>
-                  </div>
-                ) : (
-                  customerGroups.map((group) => (
-                    <div key={group.id} className="py-4 border-b">
-                      <label className="flex items-center space-x-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          className="form-checkbox h-4 w-4"
-                          checked={selectedGroups.some((g) => g.id === group.id)}
-                          onChange={() => toggleGroupSelection(group)}
-                        />
-                        <span>{group.name}</span>
-                      </label>
-                    </div>
-                  ))
-                )}
-              </div>
+          {/* Customer Segments Modal */}
+          {activeRuleId && targetingRules.find((r) => r.id === activeRuleId)?.type === "customerSegment" && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg shadow-lg w-full max-w-3xl h-[500px] flex flex-col overflow-hidden">
+                {/* Header */}
+                <div className="p-6 border-b border-gray-200">
+                  <h2 className="text-xl font-semibold">Select customer segments</h2>
+                </div>
 
-              <div className="flex justify-end space-x-2 mt-6">
-                <button onClick={() => setShowModal(false)} className="px-4 py-2 text-blue-600 hover:underline">
-                  Cancel
-                </button>
-                <button
-                  onClick={applySelectedGroups}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                >
-                  Apply
-                </button>
+                {/* Body (Empty Scrollable Section) */}
+                <div className="flex-1 overflow-y-auto px-6 py-4"></div>
+
+                {/* Footer Buttons */}
+                <div className="p-4 border-t border-gray-200 flex justify-end space-x-2">
+                  <button
+                    onClick={() => setShowModal(false)}
+                    className="px-4 py-2 text-blue-600 hover:underline cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={applySelectedGroups}
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 cursor-pointer"
+                  >
+                    Apply
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          )}
+        </>
       )}
-
-      <div>
-        <h2 className="text-xl font-bold mb-2">Store Currencies</h2>
-        {loading && <p>Loading currencies...</p>}
-        {error && <p className="text-red-600">Error: {error}</p>}
-        {currencies && (
-          <pre className="bg-gray-100 p-4 rounded text-sm overflow-auto max-h-[300px]">
-            {JSON.stringify(currencies, null, 2)}
-          </pre>
-        )}
-      </div>
     </div>
   )
 }
-
-
 
 export default Targeting
