@@ -12,7 +12,7 @@ export async function GET() {
     );
   }
 
-  const url = `https://api.bigcommerce.com/stores/${BIGCOMMERCE_STORE_HASH}/v2/countries`;
+  const url = `https://api.bigcommerce.com/stores/${BIGCOMMERCE_STORE_HASH}/v2/countries?limit=250`;
 
   try {
     const response = await fetch(url, {

@@ -8,6 +8,11 @@ export default nextConfig;
 
 module.exports = {
   images: {
-    domains: ['cdn11.bigcommerce.com'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'cdn11.bigcommerce.com'
+      }
+    ]
   },
 }
