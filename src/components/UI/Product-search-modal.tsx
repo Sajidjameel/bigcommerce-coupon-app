@@ -1,10 +1,10 @@
 "use client"
 
-import type React from "react"
-import { useState, useRef, useEffect } from "react"
+import React, { useState, useRef, useEffect } from "react"
 import { Search, X } from "lucide-react"
 import Image from "next/image"
 import type { Product } from "@/types/rule-types"
+import { useProductSearch } from "../Context/ProductsContext"  // adjust path as needed
 
 interface ProductSearchModalProps {
   isOpen: boolean
@@ -13,86 +13,55 @@ interface ProductSearchModalProps {
   selectedProduct: Product | null
 }
 
-export function ProductSearchModal({ isOpen, onClose, onSelect, selectedProduct }: ProductSearchModalProps) {
-  const [products, setProducts] = useState<Product[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
+export function ProductSearchModal({ isOpen, onClose, onSelect }: ProductSearchModalProps) {
+  const {
+    productsByPage,
+    currentSearchTerm,
+    currentPage,
+    totalPages,
+    loading,
+    error,
+    fetchProducts,
+    setSearchTerm,
+  } = useProductSearch()
+
   const [localSelectedProduct, setLocalSelectedProduct] = useState<Product | null>(null)
   const [selectionError, setSelectionError] = useState<string | null>(null)
   const modalRef = useRef<HTMLDivElement>(null)
 
-  // Reset selection when modal opens
   useEffect(() => {
     if (isOpen) {
       setLocalSelectedProduct(null)
       setSelectionError(null)
+      fetchProducts(1, currentSearchTerm)
     }
   }, [isOpen])
 
-  const fetchProducts = async (page = 1, search = "") => {
-    setLoading(true)
-    setError(null)
-    try {
-      const url = `/api/products?page=${page}${search ? `&search=${encodeURIComponent(search)}` : ""}`
-      const response = await fetch(url.toString(), {
-        credentials: 'include',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
-      }
-
-      const data = await response.json()
-      setProducts(data.products)
-      setTotalPages(data.pagination.total_pages)
-      setCurrentPage(data.pagination.current_page)
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred"
-      setError(errorMessage)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const handleSelectProduct = (product: Product) => {
-    // If clicking the same product, deselect it
     if (localSelectedProduct?.id === product.id) {
       setLocalSelectedProduct(null)
       setSelectionError(null)
       return
     }
 
-    // If trying to select a different product while one is already selected
     if (localSelectedProduct && localSelectedProduct.id !== product.id) {
       setSelectionError("You can only select one product to be automatically added to the cart.")
       return
     }
 
-    // Select new product
     setLocalSelectedProduct(product)
     setSelectionError(null)
   }
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    setCurrentPage(1)
-    fetchProducts(1, searchTerm)
+    fetchProducts(1, currentSearchTerm)
   }
 
   const handlePageChange = (page: number) => {
-    setCurrentPage(page)
-    fetchProducts(page, searchTerm)
+    fetchProducts(page, currentSearchTerm)
   }
 
-  // Close modal when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
@@ -111,18 +80,13 @@ export function ProductSearchModal({ isOpen, onClose, onSelect, selectedProduct 
     }
   }, [isOpen, onClose])
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchProducts(1, searchTerm)
-    }
-  }, [isOpen])
-
   if (!isOpen) return null
+
+  const products = productsByPage.get(currentPage) || []
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div ref={modalRef} className="bg-white rounded-lg shadow-lg w-full max-w-4xl max-h-[90vh] overflow-hidden">
-        {/* Modal Header */}
         <div className="p-4 border-b">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">Select Products</h2>
@@ -131,7 +95,6 @@ export function ProductSearchModal({ isOpen, onClose, onSelect, selectedProduct 
             </button>
           </div>
 
-          {/* Search Form */}
           <form onSubmit={handleSearch} className="mt-4">
             <div className="relative">
               <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -139,9 +102,9 @@ export function ProductSearchModal({ isOpen, onClose, onSelect, selectedProduct 
               </div>
               <input
                 type="text"
-                className=" w-full border border-gray-300 rounded-lg pl-10 pr-20 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full border border-gray-300 rounded-lg pl-10 pr-20 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Search by product name or SKU"
-                value={searchTerm}
+                value={currentSearchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
               <button
@@ -154,11 +117,10 @@ export function ProductSearchModal({ isOpen, onClose, onSelect, selectedProduct 
           </form>
         </div>
 
-        {/* Product List */}
         <div className="overflow-y-auto max-h-[calc(90vh-200px)]">
           {loading ? (
             <div className="p-6 text-center">
-              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
               <p className="mt-2">Loading products...</p>
             </div>
           ) : error ? (
@@ -210,7 +172,7 @@ export function ProductSearchModal({ isOpen, onClose, onSelect, selectedProduct 
                           />
                         ) : (
                           <div className="w-[50px] h-[50px] bg-gray-100 flex items-center justify-center text-xs text-gray-500">
-                            Image coming soon 
+                            Image coming soon
                           </div>
                         )}
                       </td>
@@ -225,7 +187,6 @@ export function ProductSearchModal({ isOpen, onClose, onSelect, selectedProduct 
           )}
         </div>
 
-        {/* Modal Footer with Pagination */}
         <div className="p-4 border-t flex justify-between items-center">
           <div className="text-sm text-gray-500">
             Page {currentPage} of {totalPages}
@@ -235,7 +196,7 @@ export function ProductSearchModal({ isOpen, onClose, onSelect, selectedProduct 
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage <= 1 || loading}
               className={`px-3 py-1 border rounded ${
-                currentPage <= 1 || loading ? "text-gray-300 cursor-not-allowed" : "text-blue-600 hover:bg-blue-50 cursor-pointer"
+                currentPage <= 1 || loading ? "text-gray-300 cursor-not-allowed" : "text-blue-600 hover:bg-blue-50"
               }`}
             >
               &lt;
@@ -244,16 +205,14 @@ export function ProductSearchModal({ isOpen, onClose, onSelect, selectedProduct 
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage >= totalPages || loading}
               className={`px-3 py-1 border rounded ${
-                currentPage >= totalPages || loading
-                  ? "text-gray-300 cursor-not-allowed"
-                  : "text-blue-600 hover:bg-blue-50 cursor-pointer"
+                currentPage >= totalPages || loading ? "text-gray-300 cursor-not-allowed" : "text-blue-600 hover:bg-blue-50"
               }`}
             >
               &gt;
             </button>
           </div>
           <div className="flex gap-2">
-            <button onClick={onClose} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
+            <button onClick={onClose} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
               Cancel
             </button>
             <button
@@ -265,9 +224,7 @@ export function ProductSearchModal({ isOpen, onClose, onSelect, selectedProduct 
               }}
               disabled={!localSelectedProduct}
               className={`px-4 py-2 rounded-lg ${
-                localSelectedProduct
-                  ? "bg-blue-600 text-white hover:bg-blue-700 cursor-pointer"
-                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                localSelectedProduct ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-gray-300 text-gray-500"
               }`}
             >
               Apply
