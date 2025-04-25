@@ -1,6 +1,8 @@
 "use client"
-import { type InclusionRule, PRODUCT_INCLUSION_OPTIONS } from "@/types/rule-types"
+import { type InclusionRule, PRODUCT_INCLUSION_OPTIONS, type Product } from "@/types/rule-types"
 import { Search, Trash2 } from "lucide-react"
+import { useState } from "react"
+import { ProductSearchModal } from "@/components/UI/Product-search-modal"
 
 // Convert the inclusion rule with additionalConditions to an array of rules
 interface ProductInclusionRuleProps {
@@ -15,7 +17,6 @@ interface RuleItem {
   selector: string
 }
 
-
 export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRuleProps) {
   // Convert the inclusion rule structure to an array format for easier handling
   const inclusionRules = [
@@ -27,6 +28,10 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
       selector: condition.selector || "",
     })),
   ]
+
+  const [showProductModal, setShowProductModal] = useState(false)
+  const [currentEditingIndex, setCurrentEditingIndex] = useState<number>(0)
+  const [selectedProducts, setSelectedProducts] = useState<Map<number, Product[]>>(new Map())
 
   const handleTypeChange = (index: number, type: string) => {
     let updatedRules = [...inclusionRules]
@@ -77,6 +82,29 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
     const updatedRules = [...inclusionRules]
     updatedRules.splice(index, 1)
     updateOriginalStructure(updatedRules)
+  }
+
+  const handleProductSelect = (index: number, products: Product[] | Product) => {
+    const selectedProductArray = Array.isArray(products) ? products : [products]
+
+    // Update selected products map
+    const updatedSelectedProducts = new Map(selectedProducts)
+    updatedSelectedProducts.set(index, selectedProductArray)
+    setSelectedProducts(updatedSelectedProducts)
+
+    // Update the selector with product names
+    const productNames = selectedProductArray.map((p) => p.name).join(", ")
+    const productIds = selectedProductArray.map((p) => p.id).join(",")
+
+    const updatedRules = [...inclusionRules]
+    updatedRules[index] = {
+      ...updatedRules[index],
+      selector: productNames,
+      value: productIds,
+    }
+
+    updateOriginalStructure(updatedRules)
+    setShowProductModal(false)
   }
 
   // Convert the array structure back to the original inclusion rule structure
@@ -178,7 +206,11 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
   return (
     <div className="space-y-4">
       {inclusionRules.length === 0 ? (
-        <button type="button" onClick={handleAddInclusionRule} className="hover:cursor-pointer text-blue-600 hover:text-blue-800 text-sm">
+        <button
+          type="button"
+          onClick={handleAddInclusionRule}
+          className="hover:cursor-pointer text-blue-600 hover:text-blue-800 text-sm"
+        >
           + Add inclusion rule
         </button>
       ) : (
@@ -221,10 +253,16 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
                   </div>
                   <input
                     type="text"
-                    className="w-full border border-gray-300 rounded pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-300 rounded pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
                     placeholder={getPlaceholderText(rule.type)}
                     value={rule.selector || ""}
-                    onChange={(e) => handleSelectorChange(index, e.target.value)}
+                    readOnly
+                    onClick={() => {
+                      if (rule.type === "individual" && !(index > 0 && isFirstRuleIndividualOrAll)) {
+                        setCurrentEditingIndex(index)
+                        setShowProductModal(true)
+                      }
+                    }}
                     disabled={index > 0 && isFirstRuleIndividualOrAll}
                   />
                 </div>
@@ -257,6 +295,13 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
           )}
         </>
       )}
+      {/* Product Search Modal */}
+      <ProductSearchModal
+        isOpen={showProductModal}
+        onClose={() => setShowProductModal(false)}
+        onSelect={(products) => handleProductSelect(currentEditingIndex, products)}
+        multiple={true} // Allow multiple product selection for inclusion rules
+      />
     </div>
   )
 }

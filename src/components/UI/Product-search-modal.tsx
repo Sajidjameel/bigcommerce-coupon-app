@@ -4,16 +4,22 @@ import React, { useState, useRef, useEffect } from "react"
 import { Search, X } from "lucide-react"
 import Image from "next/image"
 import type { Product } from "@/types/rule-types"
-import { useProductSearch } from "../Context/ProductsContext"  // adjust path as needed
+import { useProductSearch } from "../Context/ProductsContext"
 
 interface ProductSearchModalProps {
   isOpen: boolean
   onClose: () => void
-  onSelect: (product: Product) => void
-  selectedProduct: Product | null
+  onSelect: (products: Product[] | Product) => void
+  selectedProduct?: Product | null
+  multiple?: boolean
 }
 
-export function ProductSearchModal({ isOpen, onClose, onSelect }: ProductSearchModalProps) {
+export function ProductSearchModal({
+  isOpen,
+  onClose,
+  onSelect,
+  multiple = false,
+}: ProductSearchModalProps) {
   const {
     productsByPage,
     currentSearchTerm,
@@ -25,36 +31,33 @@ export function ProductSearchModal({ isOpen, onClose, onSelect }: ProductSearchM
     setSearchTerm,
   } = useProductSearch()
 
-  const [localSelectedProduct, setLocalSelectedProduct] = useState<Product | null>(null)
-  const [selectionError, setSelectionError] = useState<string | null>(null)
+  const [selectedProducts, setSelectedProducts] = useState<Product[]>([])
+  const [isSearchInitiated, setIsSearchInitiated] = useState(false)  // Added state to track search initiation
   const modalRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (isOpen) {
-      setLocalSelectedProduct(null)
-      setSelectionError(null)
+      setSelectedProducts([])
       fetchProducts(1, currentSearchTerm)
     }
   }, [isOpen])
 
   const handleSelectProduct = (product: Product) => {
-    if (localSelectedProduct?.id === product.id) {
-      setLocalSelectedProduct(null)
-      setSelectionError(null)
-      return
+    if (multiple) {
+      const alreadySelected = selectedProducts.find((p) => p.id === product.id)
+      if (alreadySelected) {
+        setSelectedProducts((prev) => prev.filter((p) => p.id !== product.id))
+      } else {
+        setSelectedProducts((prev) => [...prev, product])
+      }
+    } else {
+      setSelectedProducts([product])
     }
-
-    if (localSelectedProduct && localSelectedProduct.id !== product.id) {
-      setSelectionError("You can only select one product to be automatically added to the cart.")
-      return
-    }
-
-    setLocalSelectedProduct(product)
-    setSelectionError(null)
   }
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
+    setIsSearchInitiated(true)  // Set search as initiated when submit button is pressed or Enter is hit
     fetchProducts(1, currentSearchTerm)
   }
 
@@ -91,7 +94,7 @@ export function ProductSearchModal({ isOpen, onClose, onSelect }: ProductSearchM
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">Select Products</h2>
             <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-              <X className="w-5 h-5" />
+              <X className="w-5 h-5 cursor-pointer" />
             </button>
           </div>
 
@@ -109,7 +112,7 @@ export function ProductSearchModal({ isOpen, onClose, onSelect }: ProductSearchM
               />
               <button
                 type="submit"
-                className="cursor-pointer absolute right-2 top-1/2 transform -translate-y-1/2 px-3 py-1 bg-blue-600 text-white rounded "
+                className="cursor-pointer absolute right-2 top-1/2 transform -translate-y-1/2 px-3 py-1 bg-blue-600 text-white rounded"
               >
                 Search
               </button>
@@ -125,19 +128,12 @@ export function ProductSearchModal({ isOpen, onClose, onSelect }: ProductSearchM
             </div>
           ) : error ? (
             <div className="p-6 text-center text-red-500">{error}</div>
-          ) : products.length === 0 ? (
-            <div className="p-6 text-center">No products found</div>
           ) : (
             <div className="p-4">
-              {selectionError && (
-                <div className="mb-4 p-2 bg-red-100 text-red-700 rounded text-sm">
-                  {selectionError}
-                </div>
-              )}
               <div className="text-sm text-gray-500 mb-2">{products.length} Products</div>
               <table className="w-full border-collapse">
                 <thead>
-                  <tr className="border-b">
+                  <tr className="border-b bg-gray-100"> 
                     <th className="w-10 p-2"></th>
                     <th className="w-20 p-2"></th>
                     <th className="text-left p-2">Product</th>
@@ -146,44 +142,62 @@ export function ProductSearchModal({ isOpen, onClose, onSelect }: ProductSearchM
                   </tr>
                 </thead>
                 <tbody>
-                  {products.map((product) => (
-                    <tr
-                      key={product.id}
-                      className="border-b hover:bg-gray-50 cursor-pointer"
-                      onClick={() => handleSelectProduct(product)}
-                    >
-                      <td className="p-2 text-center">
-                        <input
-                          type="checkbox"
-                          checked={localSelectedProduct?.id === product.id}
-                          onChange={() => handleSelectProduct(product)}
-                          className="w-4 h-4 cursor-pointer"
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      </td>
-                      <td className="p-2">
-                        {product.primary_image ? (
-                          <Image
-                            src={product.primary_image.url_standard || "/placeholder.svg?height=50&width=50"}
-                            alt={product.name}
-                            width={50}
-                            height={50}
-                            className="object-contain"
+                  {products
+                    .filter((product) => {
+                      // Only filter when search is initiated
+                      if (isSearchInitiated) {
+                        return (
+                          product.name.toLowerCase().includes(currentSearchTerm.toLowerCase()) ||
+                          product.sku.toLowerCase().includes(currentSearchTerm.toLowerCase())
+                        );
+                      }
+                      return true; // Show all products while typing
+                    })
+                    .map((product) => (
+                      <tr
+                        key={product.id}
+                        className="border-b hover:bg-gray-50 cursor-pointer"
+                        onClick={() => handleSelectProduct(product)}
+                      >
+                        <td className="p-2 text-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedProducts.some((p) => p.id === product.id)}
+                            onChange={() => handleSelectProduct(product)}
+                            className="w-4 h-4 cursor-pointer"
+                            onClick={(e) => e.stopPropagation()}
                           />
-                        ) : (
-                          <div className="w-[50px] h-[50px] bg-gray-100 flex items-center justify-center text-xs text-gray-500">
-                            Image coming soon
-                          </div>
-                        )}
-                      </td>
-                      <td className="p-2">{product.name}</td>
-                      <td className="p-2">{product.sku}</td>
-                      <td className="p-2 text-right">${product.price.toFixed(2)}</td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="p-2">
+                          {product.primary_image ? (
+                            <Image
+                              src={product.primary_image.url_standard || "/placeholder.svg?height=50&width=50"}
+                              alt={product.name}
+                              width={50}
+                              height={50}
+                              className="object-contain"
+                            />
+                          ) : (
+                            <div className="w-[50px] h-[50px] bg-gray-100 flex items-center justify-center text-xs text-gray-500">
+                              Image coming soon
+                            </div>
+                          )}
+                        </td>
+                        <td className="p-2">{product.name}</td>
+                        <td className="p-2">{product.sku}</td>
+                        <td className="p-2 text-right">${product.price.toFixed(2)}</td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
-            </div>
+
+              {/* Show "No products found" if search results are empty (only after search is initiated) */}
+              {isSearchInitiated && products.filter((product) =>
+                product.name.toLowerCase().includes(currentSearchTerm.toLowerCase()) ||
+                product.sku.toLowerCase().includes(currentSearchTerm.toLowerCase())
+              ).length !==0 && (
+                <div className="p-6 text-center">Products</div>
+              )}            </div>
           )}
         </div>
 
@@ -196,7 +210,7 @@ export function ProductSearchModal({ isOpen, onClose, onSelect }: ProductSearchM
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage <= 1 || loading}
               className={`px-3 py-1 border rounded ${
-                currentPage <= 1 || loading ? "text-gray-300 cursor-not-allowed" : "text-blue-600 hover:bg-blue-50"
+                currentPage <= 1 || loading ? "text-gray-300 cursor-not-allowed" : "text-blue-600 hover:bg-blue-50 cursor-pointer"
               }`}
             >
               &lt;
@@ -205,26 +219,26 @@ export function ProductSearchModal({ isOpen, onClose, onSelect }: ProductSearchM
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage >= totalPages || loading}
               className={`px-3 py-1 border rounded ${
-                currentPage >= totalPages || loading ? "text-gray-300 cursor-not-allowed" : "text-blue-600 hover:bg-blue-50"
+                currentPage >= totalPages || loading ? "text-gray-300 cursor-not-allowed" : "text-blue-600 hover:bg-blue-50 cursor-pointer"
               }`}
             >
               &gt;
             </button>
           </div>
           <div className="flex gap-2">
-            <button onClick={onClose} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+            <button onClick={onClose} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
               Cancel
             </button>
             <button
               onClick={() => {
-                if (localSelectedProduct) {
-                  onSelect(localSelectedProduct)
+                if (selectedProducts.length > 0) {
+                  onSelect(multiple ? selectedProducts : selectedProducts[0])
                 }
                 onClose()
               }}
-              disabled={!localSelectedProduct}
-              className={`px-4 py-2 rounded-lg ${
-                localSelectedProduct ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-gray-300 text-gray-500"
+              disabled={selectedProducts.length === 0}
+              className={`px-4 py-2 rounded-lg cursor-pointer ${
+                selectedProducts.length > 0 ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-gray-300 text-gray-500"
               }`}
             >
               Apply

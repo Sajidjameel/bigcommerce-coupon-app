@@ -1,8 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import type { Rule } from "@/types/rule-types"
-import type { Product } from "@/types/rule-types"
+import type { Rule, Product } from "@/types/rule-types"
 import { QuantitySelector } from "@/components/UI/Quantity-selector"
 import { ProductSelector } from "@/components/UI/Product-selector"
 import { ProductSearchModal } from "@/components/UI/Product-search-modal"
@@ -35,10 +34,11 @@ export function GiftCartReward({ rule, onConfigChange }: GiftCartRewardProps) {
   /**
    * Handles product selection
    */
-  const handleProductSelect = (product: Product) => {
-    console.log("Selected product:", product)
-    setSelectedProduct(product)
-    onConfigChange("giftProduct", product.sku)
+  const handleProductSelect = (product: Product | Product[]) => {
+    const selected = Array.isArray(product) ? product[0] : product
+    console.log("Selected product:", selected)
+    setSelectedProduct(selected)
+    onConfigChange("giftProduct", selected.sku)
     setShowProductModal(false)
   }
 
@@ -59,6 +59,7 @@ export function GiftCartReward({ rule, onConfigChange }: GiftCartRewardProps) {
         onClose={() => setShowProductModal(false)}
         onSelect={handleProductSelect}
         selectedProduct={selectedProduct}
+        multiple={false} // For gift rule, only one product allowed
       />
 
       <span className="text-sm">in the customer&apos;s cart for free.</span>
