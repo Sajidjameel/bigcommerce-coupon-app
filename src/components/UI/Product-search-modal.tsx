@@ -10,7 +10,7 @@ interface ProductSearchModalProps {
   isOpen: boolean
   onClose: () => void
   onSelect: (products: Product[] | Product) => void
-  selectedProduct?: Product | null
+  selectedProduct?: Product | Product[] | null
   multiple?: boolean
 }
 
@@ -18,6 +18,7 @@ export function ProductSearchModal({
   isOpen,
   onClose,
   onSelect,
+  selectedProduct,
   multiple = false,
 }: ProductSearchModalProps) {
   const {
@@ -31,16 +32,24 @@ export function ProductSearchModal({
     setSearchTerm,
   } = useProductSearch()
 
+  console.log("Selected Products: ", selectedProduct)
+
   const [selectedProducts, setSelectedProducts] = useState<Product[]>([])
   const [isSearchInitiated, setIsSearchInitiated] = useState(false)  // Added state to track search initiation
   const modalRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (isOpen) {
-      setSelectedProducts([])
+      if (selectedProduct) {
+        const products = Array.isArray(selectedProduct) ? selectedProduct : [selectedProduct]
+        setSelectedProducts(products)
+      } else {
+        setSelectedProducts([])
+      }
       fetchProducts(1, currentSearchTerm)
     }
-  }, [isOpen])
+  }, [isOpen, selectedProduct])
+
 
   const handleSelectProduct = (product: Product) => {
     if (multiple) {
@@ -136,7 +145,7 @@ export function ProductSearchModal({
               <div className="text-sm text-gray-500 mb-2">{products.length} Products</div>
               <table className="w-full border-collapse">
                 <thead>
-                  <tr className="border-b bg-gray-100"> 
+                  <tr className="border-b bg-gray-100">
                     <th className="w-10 p-2"></th>
                     <th className="w-20 p-2"></th>
                     <th className="text-left p-2">Product</th>
@@ -198,9 +207,9 @@ export function ProductSearchModal({
               {isSearchInitiated && products.filter((product) =>
                 product.name.toLowerCase().includes(currentSearchTerm.toLowerCase()) ||
                 product.sku.toLowerCase().includes(currentSearchTerm.toLowerCase())
-              ).length !==0 && (
-                <div className="p-6 text-center">Products</div>
-              )}            </div>
+              ).length !== 0 && (
+                  <div className="p-6 text-center">Products</div>
+                )}            </div>
           )}
         </div>
 
@@ -212,18 +221,16 @@ export function ProductSearchModal({
             <button
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage <= 1 || loading}
-              className={`px-3 py-1 border rounded ${
-                currentPage <= 1 || loading ? "text-gray-300 cursor-not-allowed" : "text-blue-600 hover:bg-blue-50 cursor-pointer"
-              }`}
+              className={`px-3 py-1 border rounded ${currentPage <= 1 || loading ? "text-gray-300 cursor-not-allowed" : "text-blue-600 hover:bg-blue-50 cursor-pointer"
+                }`}
             >
               &lt;
             </button>
             <button
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage >= totalPages || loading}
-              className={`px-3 py-1 border rounded ${
-                currentPage >= totalPages || loading ? "text-gray-300 cursor-not-allowed" : "text-blue-600 hover:bg-blue-50 cursor-pointer"
-              }`}
+              className={`px-3 py-1 border rounded ${currentPage >= totalPages || loading ? "text-gray-300 cursor-not-allowed" : "text-blue-600 hover:bg-blue-50 cursor-pointer"
+                }`}
             >
               &gt;
             </button>
@@ -240,9 +247,8 @@ export function ProductSearchModal({
                 onClose()
               }}
               disabled={selectedProducts.length === 0}
-              className={`px-4 py-2 rounded-lg cursor-pointer ${
-                selectedProducts.length > 0 ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-gray-300 text-gray-500"
-              }`}
+              className={`px-4 py-2 rounded-lg cursor-pointer ${selectedProducts.length > 0 ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-gray-300 text-gray-500"
+                }`}
             >
               Apply
             </button>
