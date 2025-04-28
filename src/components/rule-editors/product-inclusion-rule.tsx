@@ -3,6 +3,7 @@ import { type InclusionRule, PRODUCT_INCLUSION_OPTIONS, type Product } from "@/t
 import { Search, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { ProductSearchModal } from "@/components/UI/Product-search-modal"
+import { SelectorModal } from "../UI/select-modal"
 
 // Convert the inclusion rule with additionalConditions to an array of rules
 interface ProductInclusionRuleProps {
@@ -15,6 +16,11 @@ interface RuleItem {
   type: string
   value: string
   selector: string
+}
+
+interface SelectorItem {
+  id: number
+  name: string
 }
 
 export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRuleProps) {
@@ -30,7 +36,11 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
   ]
 
   const [showProductModal, setShowProductModal] = useState(false)
+  const [showSelectorModal, setShowSelectorModal] = useState(false)
   const [currentEditingIndex, setCurrentEditingIndex] = useState<number>(0)
+  const [currentSelectorType, setCurrentSelectorType] = useState<
+    "brand" | "category" | "custom_field" | "product_option"
+  >("brand")
   const [selectedProducts, setSelectedProducts] = useState<Map<number, Product[]>>(new Map())
 
   const handleTypeChange = (index: number, type: string) => {
@@ -92,19 +102,61 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
     updatedSelectedProducts.set(index, selectedProductArray)
     setSelectedProducts(updatedSelectedProducts)
 
-    // Update the selector with product names
-    const productNames = selectedProductArray.map((p) => p.name).join(", ")
-    const productIds = selectedProductArray.map((p) => p.id).join(",")
+    // Compute selector display text
+    let selectorText = ""
+    if (selectedProductArray.length === 1) {
+      selectorText = selectedProductArray[0].name
+    } else {
+      // For multiple products, show the first product's name and the count of other selected products
+      selectorText = `${selectedProductArray[0].name} +${selectedProductArray.length - 1}`
+    }
 
+    // Build the value (always all IDs)
+    const productIds = selectedProductArray.map((p) => p.id.toString().trim()).join(",")
+
+    // Update the inclusion rule with the new selector and product IDs
     const updatedRules = [...inclusionRules]
     updatedRules[index] = {
       ...updatedRules[index],
-      selector: productNames,
+      selector: selectorText,
       value: productIds,
     }
 
+    // Apply the updated rules
     updateOriginalStructure(updatedRules)
+
+    // Close the modal
     setShowProductModal(false)
+  }
+
+  const handleSelectorSelect = (index: number, items: SelectorItem[] | SelectorItem) => {
+    const selectedItems = Array.isArray(items) ? items : [items]
+
+    // Compute selector display text
+    let selectorText = ""
+    if (selectedItems.length === 1) {
+      selectorText = selectedItems[0].name
+    } else {
+      // For multiple items, show the first item's name and the count of other selected items
+      selectorText = `${selectedItems[0].name} +${selectedItems.length - 1}`
+    }
+
+    // Build the value (always all IDs)
+    const itemIds = selectedItems.map((item) => item.id.toString().trim()).join(",")
+
+    // Update the rule with the new selector and item IDs
+    const updatedRules = [...inclusionRules]
+    updatedRules[index] = {
+      ...updatedRules[index],
+      selector: selectorText,
+      value: itemIds,
+    }
+
+    // Apply the updated rules
+    updateOriginalStructure(updatedRules)
+
+    // Close the modal
+    setShowSelectorModal(false)
   }
 
   // Convert the array structure back to the original inclusion rule structure
@@ -195,6 +247,18 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
     return [...options, ...filteredOptions]
   }
 
+  // Handle input click to open appropriate modal
+  const handleInputClick = (index: number, type: string) => {
+    setCurrentEditingIndex(index)
+
+    if (type === "individual") {
+      setShowProductModal(true)
+    } else if (["brand", "category", "custom_field", "product_option"].includes(type)) {
+      setCurrentSelectorType(type as "brand" | "category" | "custom_field" | "product_option")
+      setShowSelectorModal(true)
+    }
+  }
+
   // Determine if we should show the "Add another inclusion rule" button
   // Only show if all rules have valid selections and first rule is not "individual" or "all"
   const showAddButton =
@@ -258,9 +322,8 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
                     value={rule.selector || ""}
                     readOnly
                     onClick={() => {
-                      if (rule.type === "individual" && !(index > 0 && isFirstRuleIndividualOrAll)) {
-                        setCurrentEditingIndex(index)
-                        setShowProductModal(true)
+                      if (!(index > 0 && isFirstRuleIndividualOrAll)) {
+                        handleInputClick(index, rule.type)
                       }
                     }}
                     disabled={index > 0 && isFirstRuleIndividualOrAll}
@@ -295,12 +358,22 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
           )}
         </>
       )}
+
       {/* Product Search Modal */}
       <ProductSearchModal
         isOpen={showProductModal}
         onClose={() => setShowProductModal(false)}
         onSelect={(products) => handleProductSelect(currentEditingIndex, products)}
         multiple={true} // Allow multiple product selection for inclusion rules
+      />
+
+      {/* Selector Modal for brands, categories, etc. */}
+      <SelectorModal
+        isOpen={showSelectorModal}
+        onClose={() => setShowSelectorModal(false)}
+        onSelect={(items) => handleSelectorSelect(currentEditingIndex, items)}
+        type={currentSelectorType}
+        multiple={true}
       />
     </div>
   )

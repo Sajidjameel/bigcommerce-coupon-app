@@ -1,6 +1,8 @@
 "use client"
 import { type ExclusionRule, PRODUCT_INCLUSION_OPTIONS } from "@/types/rule-types"
 import { Search, Trash2 } from "lucide-react"
+import { useState } from "react"
+import { SelectorModal } from "../UI/select-modal"
 
 // Exclusion options - same as inclusion but without "all" option
 const PRODUCT_EXCLUSION_OPTIONS = PRODUCT_INCLUSION_OPTIONS.filter((option) => option.value !== "all")
@@ -13,7 +15,18 @@ interface ProductExclusionRuleProps {
   onRulesChange: (rules: ExclusionRule[]) => void
 }
 
+interface SelectorItem {
+  id: number
+  name: string
+}
+
 export function ProductExclusionRule({ rules, onRulesChange }: ProductExclusionRuleProps) {
+  const [showSelectorModal, setShowSelectorModal] = useState(false)
+  const [currentEditingIndex, setCurrentEditingIndex] = useState<number>(0)
+  const [currentSelectorType, setCurrentSelectorType] = useState<
+    "brand" | "category" | "custom_field" | "product_option"
+  >("brand")
+
   const handleTypeChange = (index: number, type: string) => {
     let updatedRules = [...rules]
 
@@ -58,6 +71,47 @@ export function ProductExclusionRule({ rules, onRulesChange }: ProductExclusionR
     const updatedRules = [...rules]
     updatedRules.splice(index, 1)
     onRulesChange(updatedRules)
+  }
+
+  // Handle selector item selection
+  const handleSelectorSelect = (index: number, items: SelectorItem[] | SelectorItem) => {
+    const selectedItems = Array.isArray(items) ? items : [items]
+
+    // Compute selector display text
+    let selectorText = ""
+    if (selectedItems.length === 1) {
+      selectorText = selectedItems[0].name
+    } else {
+      // For multiple items, show the first item's name and the count of other selected items
+      selectorText = `${selectedItems[0].name} +${selectedItems.length - 1}`
+    }
+
+    // Build the value (always all IDs)
+    const itemIds = selectedItems.map((item) => item.id.toString().trim()).join(",")
+
+    // Update the rule with the new selector and item IDs
+    const updatedRules = [...rules]
+    updatedRules[index] = {
+      ...updatedRules[index],
+      selector: selectorText,
+      value: itemIds,
+    }
+
+    // Apply the updated rules
+    onRulesChange(updatedRules)
+
+    // Close the modal
+    setShowSelectorModal(false)
+  }
+
+  // Handle input click to open appropriate modal
+  const handleInputClick = (index: number, type: string) => {
+    setCurrentEditingIndex(index)
+
+    if (["brand", "category", "custom_field", "product_option"].includes(type)) {
+      setCurrentSelectorType(type as "brand" | "category" | "custom_field" | "product_option")
+      setShowSelectorModal(true)
+    }
   }
 
   // Get placeholder text based on rule type
@@ -127,7 +181,11 @@ export function ProductExclusionRule({ rules, onRulesChange }: ProductExclusionR
   return (
     <div className="space-y-4">
       {rules.length === 0 ? (
-        <button type="button" onClick={handleAddExclusionRule} className="cursor-pointer text-blue-600 hover:text-blue-800 text-sm">
+        <button
+          type="button"
+          onClick={handleAddExclusionRule}
+          className="cursor-pointer text-blue-600 hover:text-blue-800 text-sm"
+        >
           + Add exclusion rule
         </button>
       ) : (
@@ -170,10 +228,15 @@ export function ProductExclusionRule({ rules, onRulesChange }: ProductExclusionR
                   </div>
                   <input
                     type="text"
-                    className="w-full border border-gray-300 rounded pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-300 rounded pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
                     placeholder={getPlaceholderText(rule.type)}
                     value={rule.selector || ""}
-                    onChange={(e) => handleSelectorChange(index, e.target.value)}
+                    readOnly
+                    onClick={() => {
+                      if (!(index > 0 && isFirstRuleIndividual)) {
+                        handleInputClick(index, rule.type)
+                      }
+                    }}
                     disabled={index > 0 && isFirstRuleIndividual}
                   />
                 </div>
@@ -204,6 +267,15 @@ export function ProductExclusionRule({ rules, onRulesChange }: ProductExclusionR
           )}
         </>
       )}
+
+      {/* Selector Modal for brands, categories, etc. */}
+      <SelectorModal
+        isOpen={showSelectorModal}
+        onClose={() => setShowSelectorModal(false)}
+        onSelect={(items) => handleSelectorSelect(currentEditingIndex, items)}
+        type={currentSelectorType}
+        multiple={true}
+      />
     </div>
   )
 }

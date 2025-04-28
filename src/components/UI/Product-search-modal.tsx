@@ -44,16 +44,19 @@ export function ProductSearchModal({
 
   const handleSelectProduct = (product: Product) => {
     if (multiple) {
-      const alreadySelected = selectedProducts.find((p) => p.id === product.id)
+      // If multiple products are allowed, toggle the selection
+      const alreadySelected = selectedProducts.find((p) => p.id === product.id);
       if (alreadySelected) {
-        setSelectedProducts((prev) => prev.filter((p) => p.id !== product.id))
+        setSelectedProducts((prev) => prev.filter((p) => p.id !== product.id));
       } else {
-        setSelectedProducts((prev) => [...prev, product])
+        setSelectedProducts((prev) => [...prev, product]);
       }
     } else {
-      setSelectedProducts([product])
+      // If only one product can be selected, set it as the only selected product
+      setSelectedProducts([product]);
     }
-  }
+  };
+  
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()

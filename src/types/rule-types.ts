@@ -4,6 +4,7 @@ export type Rule = {
     condition: string
     reward: string
     config: {
+      
       price?: number
       quantity?: number
       applyTo?: string
@@ -63,13 +64,21 @@ export interface Pagination {
   
 
 
-  export type InclusionRule = {
+export interface InclusionRule {
+  id: string
+  type: string
+  value: string
+  selector?: string
+  additionalConditions?: {
     id: string
-    type: string // "individual", "all", "category", "brand", "custom_field", "product_option"
-    value?: string
+    type: string
+    value: string
     selector?: string
-    additionalConditions?: AdditionalCondition[]
-  }
+  }[]
+}
+
+
+
   
   export type AdditionalCondition = {
     id: string
