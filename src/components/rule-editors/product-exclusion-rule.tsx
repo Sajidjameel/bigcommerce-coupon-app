@@ -18,6 +18,8 @@ interface ProductExclusionRuleProps {
 interface SelectorItem {
   id: number
   name: string
+  fieldName?: string
+  fieldValues?: string[]
 }
 
 export function ProductExclusionRule({ rules, onRulesChange }: ProductExclusionRuleProps) {
@@ -73,21 +75,41 @@ export function ProductExclusionRule({ rules, onRulesChange }: ProductExclusionR
     onRulesChange(updatedRules)
   }
 
-  // Handle selector item selection
+  // Update the handleSelectorSelect function to handle custom field values
+  // Find the handleSelectorSelect function and modify it to handle custom field type:
+
   const handleSelectorSelect = (index: number, items: SelectorItem[] | SelectorItem) => {
     const selectedItems = Array.isArray(items) ? items : [items]
 
     // Compute selector display text
     let selectorText = ""
     if (selectedItems.length === 1) {
-      selectorText = selectedItems[0].name
+      const item = selectedItems[0]
+
+      // Special handling for custom fields
+      if (rules[index].type === "custom_field" && "fieldName" in item && "fieldValues" in item) {
+        selectorText = `${item.fieldName}: ${(item.fieldValues as string[]).join(", ")}`
+      } else {
+        selectorText = item.name
+      }
     } else {
       // For multiple items, show the first item's name and the count of other selected items
       selectorText = `${selectedItems[0].name} +${selectedItems.length - 1}`
     }
 
     // Build the value (always all IDs)
-    const itemIds = selectedItems.map((item) => item.id.toString().trim()).join(",")
+    const itemIds = selectedItems
+      .map((item) => {
+        // For custom fields, store the field name and values in a special format
+        if (rules[index].type === "custom_field" && "fieldName" in item && "fieldValues" in item) {
+          return JSON.stringify({
+            fieldName: item.fieldName,
+            fieldValues: item.fieldValues,
+          })
+        }
+        return item.id.toString().trim()
+      })
+      .join(",")
 
     // Update the rule with the new selector and item IDs
     const updatedRules = [...rules]

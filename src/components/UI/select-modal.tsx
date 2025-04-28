@@ -1,9 +1,13 @@
 "use client"
+
 import { BrandSelectionModal } from "./brands-selection-modal"
+import { CustomFieldSelectorModal } from "./custom-field-selector-modal"
 
 interface SelectorItem {
   id: number
   name: string
+  fieldName?: string
+  fieldValues?: string[]
 }
 
 interface SelectorModalProps {
@@ -35,6 +39,25 @@ export function SelectorModal({
           onSelect={onSelect}
           multiple={multiple}
           initialSelectedBrands={initialSelectedItems}
+        />
+      )
+    case "custom_field":
+      return (
+        <CustomFieldSelectorModal
+          isOpen={isOpen}
+          onClose={onClose}
+          onApply={(fieldName, fieldValues) => {
+            // Format the result to match the expected SelectorItem format
+            const result = {
+              id: Date.now(),
+              name: `${fieldName}: ${fieldValues.join(", ")}`,
+              fieldName,
+              fieldValues,
+            }
+            onSelect(multiple ? [result] : result)
+          }}
+          initialFieldName=""
+          initialFieldValues={[""]}
         />
       )
     // You can add more modal types here as needed
