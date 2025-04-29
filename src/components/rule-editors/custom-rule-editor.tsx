@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import type { Rule } from "@/types/rule-types"
 import { CONDITION_OPTIONS, REWARD_OPTIONS, FREQUENCY_OPTIONS } from "@/types/rule-types"
 
@@ -63,6 +63,7 @@ export function CustomRuleEditor({ rule, onRuleChange, onSave, onCancel, onSwitc
     onRuleChange(updatedRule)
   }
 
+  useEffect(() => { console.log("Selected Reward: ", selectedReward) }, [selectedReward])
   const handleRewardChange = (value: string) => {
     const reward = REWARD_OPTIONS.find((option) => option.value === value) || REWARD_OPTIONS[0]
     setSelectedReward(reward)
@@ -243,26 +244,30 @@ export function CustomRuleEditor({ rule, onRuleChange, onSave, onCancel, onSwitc
               </div>
             </div>
 
-            <div className="relative ml-2">
-              <select
-                className="appearance-none border border-gray-300 rounded px-3 py-2 pr-8 text-sm bg-white w-32"
-                value={rule.config.frequency || "once"}
-                onChange={(e) => handleConfigChange("frequency", e.target.value)}
-              >
-                {FREQUENCY_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                  <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                </svg>
-              </div>
-            </div>
+            {!(selectedReward.value == "free_shipping") &&
+              <>
+                <div className="relative ml-2">
+                  <select
+                    className="appearance-none border border-gray-300 rounded px-3 py-2 pr-8 text-sm bg-white w-32"
+                    value={rule.config.frequency || "once"}
+                    onChange={(e) => handleConfigChange("frequency", e.target.value)}
+                  >
+                    {FREQUENCY_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                    <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                      <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                    </svg>
+                  </div>
+                </div>
 
-            <span className="text-sm">per cart</span>
+                <span className="text-sm">per cart</span>
+              </>
+            }
           </div>
 
           {/* Reward Details */}
