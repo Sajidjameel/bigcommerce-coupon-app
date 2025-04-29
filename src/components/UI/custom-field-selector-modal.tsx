@@ -47,16 +47,16 @@ export function CustomFieldSelectorModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black  bg-opacity-80 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-lg p-6 w-[50%] max-h-[100vh] h-[70vh] overflow-y-auto">
-        <h2 className="text-xl font-medium mb-4">Select custom field values</h2>
+        <h2 className="text-2xl font-medium  mb-6">Select custom field values</h2>
         <p className="text-sm text-gray-600 mb-6">
           Enter the custom field that the product needs to be matched against. Values must match exactly.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div>
-            <label htmlFor="custom-field-name" className="block text-sm font-medium mb-2">
+            <label htmlFor="custom-field-name" className="block text-sm font-bold mb-2">
               Custom field name
             </label>
             <input
@@ -69,7 +69,7 @@ export function CustomFieldSelectorModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Field value</label>
+            <label className="block text-sm font-bold mb-2">Field value</label>
             <div className="space-y-2">
               {fieldValues.map((fieldValue, index) => (
                 <div key={fieldValue.id} className="flex items-center gap-2">
@@ -85,7 +85,7 @@ export function CustomFieldSelectorModal({
                     className="text-blue-600 hover:text-blue-800"
                     disabled={fieldValues.length === 1}
                   >
-                    <Trash2 className={`w-5 h-5 ${fieldValues.length === 1 ? "opacity-50" : ""}`} />
+                    <Trash2 className={`w-5 h-5 cursor-pointer ${fieldValues.length === 1 ? "opacity-50" : ""}`} />
                   </button>
                 </div>
               ))}
@@ -101,7 +101,7 @@ export function CustomFieldSelectorModal({
           <span className="mr-1 text-2xl cursor-pointer">+</span> Add another value
         </button>
 
-        <div className="flex justify-end items-end gap-2 mt-[13rem]">
+        <div className="flex justify-end items-end gap-2 mt-[12rem]">
           <button type="button" onClick={onClose} className="px-4 py-2 cursor-pointer text-blue-600 hover:text-blue-800 rounded">
             Cancel
           </button>

@@ -1,33 +1,42 @@
-import { NextRequest, NextResponse } from "next/server"
+// app/api/categories/route.ts
+import { NextResponse } from 'next/server';
 
-export async function GET(req: NextRequest) {
-  const token = req.cookies.get("bc_token")?.value || process.env.BIGCOMMERCE_API_TOKEN
-  const storeHash = process.env.BIGCOMMERCE_STORE_HASH
+export async function GET(request: Request) {
+  const BIGCOMMERCE_STORE_HASH = process.env.BIGCOMMERCE_STORE_HASH;
+  const BIGCOMMERCE_ACCESS_TOKEN = process.env.BIGCOMMERCE_ACCESS_TOKEN;
 
-  if (!token || !storeHash) {
-    return NextResponse.json({ error: "Missing API token or store hash" }, { status: 400 })
+  if (!BIGCOMMERCE_STORE_HASH || !BIGCOMMERCE_ACCESS_TOKEN) {
+    return NextResponse.json(
+      { error: 'Missing BigCommerce credentials in environment variables' },
+      { status: 500 }
+    );
   }
 
-  const url = `https://api.bigcommerce.com/stores/${storeHash}/v3/channels?limit=250&type:in=storefront`
+  // Get tree_ids from query params or use default "1,2"
+  const { searchParams } = new URL(request.url);
+  const treeIds = searchParams.get('tree_ids') || '1,2';
 
   try {
-    const res = await fetch(url, {
-      method: "GET",
-      headers: {
-        "X-Auth-Token": token,
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-      },
-    })
+    const res = await fetch(
+      `https://api.bigcommerce.com/stores/${BIGCOMMERCE_STORE_HASH}/v3/catalog/trees/categories?limit=250&page=1&tree_id:in=${treeIds}`,
+      {
+        method: 'GET',
+        headers: {
+          'X-Auth-Token': BIGCOMMERCE_ACCESS_TOKEN,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      }
+    );
 
     if (!res.ok) {
-      const err = await res.json()
-      return NextResponse.json({ error: err?.title || "Failed to fetch channels" }, { status: res.status })
+      return NextResponse.json({ error: "Failed to fetch categories" }, { status: res.status });
     }
 
-    const data = await res.json()
-    return NextResponse.json(data)
-  } catch (error) {
-    return NextResponse.json({ error: "Network error or invalid response" }, { status: 500 })
+    const data = await res.json();
+    return NextResponse.json(data);
+  } catch (err) {
+    console.error("Categories fetch error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

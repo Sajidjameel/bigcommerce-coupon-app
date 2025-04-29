@@ -4,6 +4,7 @@ import { Search, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { ProductSearchModal } from "@/components/UI/Product-search-modal"
 import { SelectorModal } from "../UI/select-modal"
+import { TagInput } from "../UI/tag-input"
 
 // Convert the inclusion rule with additionalConditions to an array of rules
 interface ProductInclusionRuleProps {
@@ -23,6 +24,11 @@ interface SelectorItem {
   name: string
   fieldName?: string
   fieldValues?: string[]
+  optionName?: string
+  optionValues?: string[]
+  channelId?: number
+  channelName?: string
+  path?: string
 }
 
 export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRuleProps) {
@@ -44,6 +50,9 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
     "brand" | "category" | "custom_field" | "product_option"
   >("brand")
   const [selectedProducts, setSelectedProducts] = useState<Map<number, Product[]>>(new Map())
+
+  // Store selected items for each rule to preserve values when reopening modals
+  const [selectedItems, setSelectedItems] = useState<Map<number, SelectorItem[]>>(new Map())
 
   const handleTypeChange = (index: number, type: string) => {
     let updatedRules = [...inclusionRules]
@@ -94,6 +103,11 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
     const updatedRules = [...inclusionRules]
     updatedRules.splice(index, 1)
     updateOriginalStructure(updatedRules)
+
+    // Also remove the selected items for this rule
+    const updatedSelectedItems = new Map(selectedItems)
+    updatedSelectedItems.delete(index)
+    setSelectedItems(updatedSelectedItems)
   }
 
   const handleProductSelect = (index: number, products: Product[] | Product) => {
@@ -132,32 +146,82 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
   }
 
   const handleSelectorSelect = (index: number, items: SelectorItem[] | SelectorItem) => {
-    const selectedItems = Array.isArray(items) ? items : [items]
+    const selectedItemsArray = Array.isArray(items) ? items : [items]
+
+    // Update selected items map to preserve values for reopening
+    const updatedSelectedItems = new Map(selectedItems)
+
+    // If no items are selected, clear the selection for this rule
+    if (selectedItemsArray.length === 0) {
+      updatedSelectedItems.delete(index)
+
+      // Update the rule with empty values
+      const updatedRules = [...inclusionRules]
+      updatedRules[index] = {
+        ...updatedRules[index],
+        selector: "",
+        value: "",
+      }
+
+      // Apply the updated rules
+      updateOriginalStructure(updatedRules)
+      setSelectedItems(updatedSelectedItems)
+      setShowSelectorModal(false)
+      return
+    }
+
+    updatedSelectedItems.set(index, selectedItemsArray)
+    setSelectedItems(updatedSelectedItems)
 
     // Compute selector display text
     let selectorText = ""
-    if (selectedItems.length === 1) {
-      const item = selectedItems[0]
+    if (selectedItemsArray.length === 1) {
+      const item = selectedItemsArray[0]
 
       // Special handling for custom fields
       if (inclusionRules[index].type === "custom_field" && "fieldName" in item && "fieldValues" in item) {
         selectorText = `${item.fieldName}: ${(item.fieldValues as string[]).join(", ")}`
+      }
+      // Special handling for product options
+      else if (inclusionRules[index].type === "product_option" && "optionName" in item && "optionValues" in item) {
+        selectorText = `${item.optionName}: ${(item.optionValues as string[]).join(", ")}`
+      }
+      // Special handling for categories
+      else if (inclusionRules[index].type === "category" && "channelId" in item) {
+        selectorText = item.name
       } else {
         selectorText = item.name
       }
     } else {
       // For multiple items, show the first item's name and the count of other selected items
-      selectorText = `${selectedItems[0].name} +${selectedItems.length - 1}`
+      selectorText = `${selectedItemsArray[0].name} +${selectedItemsArray.length - 1}`
     }
 
     // Build the value (always all IDs)
-    const itemIds = selectedItems
+    const itemIds = selectedItemsArray
       .map((item) => {
         // For custom fields, store the field name and values in a special format
         if (inclusionRules[index].type === "custom_field" && "fieldName" in item && "fieldValues" in item) {
           return JSON.stringify({
             fieldName: item.fieldName,
             fieldValues: item.fieldValues,
+          })
+        }
+        // For product options, store the option name and values in a special format
+        else if (inclusionRules[index].type === "product_option" && "optionName" in item && "optionValues" in item) {
+          return JSON.stringify({
+            optionName: item.optionName,
+            optionValues: item.optionValues,
+          })
+        }
+        // For categories, store additional metadata
+        else if (inclusionRules[index].type === "category" && "channelId" in item) {
+          return JSON.stringify({
+            id: item.id,
+            name: item.name,
+            channelId: item.channelId,
+            channelName: item.channelName,
+            path: item.path,
           })
         }
         return item.id.toString().trim()
@@ -177,6 +241,94 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
 
     // Close the modal
     setShowSelectorModal(false)
+  }
+
+  // Get initial selected items for the current editing rule
+  const getInitialSelectedItems = (index: number): SelectorItem[] => {
+    // If we have stored selected items for this rule, return them
+    if (selectedItems.has(index)) {
+      return selectedItems.get(index) || []
+    }
+
+    // Otherwise, try to parse from the rule value
+    const rule = inclusionRules[index]
+    if (!rule || !rule.value) return []
+
+    try {
+      if (rule.type === "custom_field") {
+        const parsedValue = JSON.parse(rule.value)
+        if (parsedValue.fieldName && parsedValue.fieldValues) {
+          return [
+            {
+              id: Date.now(),
+              name: rule.selector,
+              fieldName: parsedValue.fieldName,
+              fieldValues: parsedValue.fieldValues,
+            },
+          ]
+        }
+      } else if (rule.type === "product_option") {
+        const parsedValue = JSON.parse(rule.value)
+        if (parsedValue.optionName && parsedValue.optionValues) {
+          return [
+            {
+              id: Date.now(),
+              name: rule.selector,
+              optionName: parsedValue.optionName,
+              optionValues: parsedValue.optionValues,
+            },
+          ]
+        }
+      } else if (rule.type === "category") {
+        // Try to parse as array of category objects
+        try {
+          return rule.value
+            .split(",")
+            .map((val) => {
+              let parsedVal
+              try {
+                parsedVal = JSON.parse(val)
+              } catch (e) {
+                console.error("Error parsing category value:", e)
+                return null // Or handle the error as appropriate
+              }
+              return {
+                id: parsedVal.id,
+                name: parsedVal.name,
+                channelId: parsedVal.channelId,
+                channelName: parsedVal.channelName,
+                path: parsedVal.path,
+              }
+            })
+            .filter((item) => item !== null) as SelectorItem[]
+        } catch (e) {
+          // If parsing as array fails, try as single object
+          let parsedValue
+          try {
+            parsedValue = JSON.parse(rule.value)
+          } catch (e) {
+            console.error("Error parsing category value:", e)
+            return []
+          }
+          if (parsedValue.id) {
+            return [
+              {
+                id: parsedValue.id,
+                name: parsedValue.name,
+                channelId: parsedValue.channelId,
+                channelName: parsedValue.channelName,
+                path: parsedValue.path,
+              },
+            ]
+          }
+        }
+      }
+    } catch (e) {
+      // If parsing fails, return empty array
+      return []
+    }
+
+    return []
   }
 
   // Convert the array structure back to the original inclusion rule structure
@@ -279,6 +431,29 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
     }
   }
 
+  // Get selected items for a rule
+  const getSelectedItemsForRule = (index: number): { id: number; name: string }[] => {
+    const rule = inclusionRules[index]
+    if (!rule || !rule.value || !rule.selector) return []
+
+    // For individual products
+    if (rule.type === "individual" && selectedProducts.has(index)) {
+      return selectedProducts.get(index)?.map((p) => ({ id: p.id, name: p.name })) || []
+    }
+
+    // For other types, try to get from selectedItems
+    if (selectedItems.has(index)) {
+      return selectedItems.get(index)?.map((item) => ({ id: item.id, name: item.name })) || []
+    }
+
+    // If we have a selector but no parsed items, create a placeholder
+    if (rule.selector) {
+      return [{ id: Date.now(), name: rule.selector }]
+    }
+
+    return []
+  }
+
   // Determine if we should show the "Add another inclusion rule" button
   // Only show if all rules have valid selections and first rule is not "individual" or "all"
   const showAddButton =
@@ -335,12 +510,9 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
                   <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                     <Search className="w-4 h-4 text-gray-500" />
                   </div>
-                  <input
-                    type="text"
-                    className="w-full border border-gray-300 rounded pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
+                  <TagInput
+                    tags={getSelectedItemsForRule(index)}
                     placeholder={getPlaceholderText(rule.type)}
-                    value={rule.selector || ""}
-                    readOnly
                     onClick={() => {
                       if (!(index > 0 && isFirstRuleIndividualOrAll)) {
                         handleInputClick(index, rule.type)
@@ -394,6 +566,7 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
         onSelect={(items) => handleSelectorSelect(currentEditingIndex, items)}
         type={currentSelectorType}
         multiple={true}
+        initialSelectedItems={getInitialSelectedItems(currentEditingIndex)}
       />
     </div>
   )
