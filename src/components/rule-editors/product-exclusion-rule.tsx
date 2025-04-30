@@ -1,9 +1,10 @@
 "use client"
-import { type ExclusionRule, PRODUCT_INCLUSION_OPTIONS } from "@/types/rule-types"
+import { type ExclusionRule, PRODUCT_INCLUSION_OPTIONS, type Product } from "@/types/rule-types"
 import { Search, Trash2 } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { SelectorModal } from "../UI/select-modal"
 import { TagInput } from "../UI/tag-input"
+import { ProductSearchModal } from "../UI/Product-search-modal"
 
 // Exclusion options - same as inclusion but without "all" option
 const PRODUCT_EXCLUSION_OPTIONS = PRODUCT_INCLUSION_OPTIONS.filter((option) => option.value !== "all")
@@ -30,13 +31,45 @@ interface SelectorItem {
 
 export function ProductExclusionRule({ rules, onRulesChange }: ProductExclusionRuleProps) {
   const [showSelectorModal, setShowSelectorModal] = useState(false)
+  const [showProductModal, setShowProductModal] = useState(false)
   const [currentEditingIndex, setCurrentEditingIndex] = useState<number>(0)
   const [currentSelectorType, setCurrentSelectorType] = useState<
     "brand" | "category" | "custom_field" | "product_option"
   >("brand")
+  const [selectedProducts, setSelectedProducts] = useState<Map<number, Product[]>>(new Map())
 
   // Store selected items for each rule to preserve values when reopening modals
   const [selectedItems, setSelectedItems] = useState<Map<number, SelectorItem[]>>(new Map())
+
+  // Initialize selectedProducts from rules when component mounts or rules change
+  useEffect(() => {
+    const newSelectedProducts = new Map<number, Product[]>()
+
+    rules.forEach((rule, index) => {
+      if (rule.type === "individual" && rule.value) {
+        try {
+          // Try to parse product IDs from the rule value
+          const productIds = rule.value.split(",").map((id) => Number.parseInt(id.trim(), 10))
+
+          // Create placeholder products with the information we have
+          const products = productIds.map((id) => ({
+            id,
+            name: rule.selector || `Product ${id}`,
+            sku: "",
+            price: 0,
+            primary_image: null,
+          }))
+
+          newSelectedProducts.set(index, products)
+        } catch (e) {
+          // If parsing fails, set empty array
+          newSelectedProducts.set(index, [])
+        }
+      }
+    })
+
+    setSelectedProducts(newSelectedProducts)
+  }, [rules])
 
   const handleTypeChange = (index: number, type: string) => {
     let updatedRules = [...rules]
@@ -65,15 +98,6 @@ export function ProductExclusionRule({ rules, onRulesChange }: ProductExclusionR
     onRulesChange(updatedRules)
   }
 
-  const handleSelectorChange = (index: number, selector: string) => {
-    const updatedRules = [...rules]
-    updatedRules[index] = {
-      ...updatedRules[index],
-      selector,
-    }
-    onRulesChange(updatedRules)
-  }
-
   const handleAddExclusionRule = () => {
     onRulesChange([...rules, { id: `exclusion-${Date.now()}`, type: "please_select", value: "", selector: "" }])
   }
@@ -87,6 +111,43 @@ export function ProductExclusionRule({ rules, onRulesChange }: ProductExclusionR
     const updatedSelectedItems = new Map(selectedItems)
     updatedSelectedItems.delete(index)
     setSelectedItems(updatedSelectedItems)
+
+    // Remove selected products for this rule
+    const updatedSelectedProducts = new Map(selectedProducts)
+    updatedSelectedProducts.delete(index)
+    setSelectedProducts(updatedSelectedProducts)
+  }
+
+  const handleProductSelect = (index: number, products: Product[] | Product) => {
+    const selectedProductArray = Array.isArray(products) ? products : [products]
+
+    // Update selected products map
+    const updatedSelectedProducts = new Map(selectedProducts)
+    updatedSelectedProducts.set(index, selectedProductArray)
+    setSelectedProducts(updatedSelectedProducts)
+
+    // Compute selector display text
+    let selectorText = ""
+    if (selectedProductArray.length > 0) {
+      selectorText = selectedProductArray[0].name
+    }
+
+    // Build the value (always all IDs)
+    const productIds = selectedProductArray.map((p) => p.id.toString().trim()).join(",")
+
+    // Update the rule with the new selector and product IDs
+    const updatedRules = [...rules]
+    updatedRules[index] = {
+      ...updatedRules[index],
+      selector: selectorText,
+      value: productIds,
+    }
+
+    // Apply the updated rules
+    onRulesChange(updatedRules)
+
+    // Close the modal
+    setShowProductModal(false)
   }
 
   const handleSelectorSelect = (index: number, items: SelectorItem[] | SelectorItem) => {
@@ -119,7 +180,7 @@ export function ProductExclusionRule({ rules, onRulesChange }: ProductExclusionR
 
     // Compute selector display text
     let selectorText = ""
-    if (selectedItemsArray.length === 1) {
+    if (selectedItemsArray.length > 0) {
       const item = selectedItemsArray[0]
 
       // Special handling for custom fields
@@ -136,9 +197,6 @@ export function ProductExclusionRule({ rules, onRulesChange }: ProductExclusionR
       } else {
         selectorText = item.name
       }
-    } else {
-      // For multiple items, show the first item's name and the count of other selected items
-      selectorText = `${selectedItemsArray[0].name} +${selectedItemsArray.length - 1}`
     }
 
     // Build the value (always all IDs)
@@ -205,7 +263,7 @@ export function ProductExclusionRule({ rules, onRulesChange }: ProductExclusionR
           return [
             {
               id: Date.now(),
-              name: rule.selector ??" ",
+              name: rule.selector ?? " ",
               fieldName: parsedValue.fieldName,
               fieldValues: parsedValue.fieldValues,
             },
@@ -273,10 +331,45 @@ export function ProductExclusionRule({ rules, onRulesChange }: ProductExclusionR
     return []
   }
 
+  // Get selected products for a rule
+  const getSelectedProductsForRule = (index: number): Product[] => {
+    if (selectedProducts.has(index)) {
+      return selectedProducts.get(index) || []
+    }
+
+    // Try to parse from the rule value if we don't have it in state
+    const rule = rules[index]
+    if (rule && rule.type === "individual" && rule.value) {
+      try {
+        // Try to parse product IDs from the rule value
+        const productIds = rule.value.split(",").map((id) => Number.parseInt(id.trim(), 10))
+
+        // Create placeholder products with the information we have
+        return productIds.map((id) => ({
+          id,
+          name: rule.selector || `Product ${id}`,
+          sku: "",
+          price: 0,
+          primary_image: null,
+        }))
+      } catch (e) {
+        return []
+      }
+    }
+
+    return []
+  }
+
   // Get selected items for a rule
   const getSelectedItemsForRule = (index: number): { id: number; name: string }[] => {
     const rule = rules[index]
     if (!rule || !rule.value || !rule.selector) return []
+
+    // For individual products
+    if (rule.type === "individual") {
+      const products = getSelectedProductsForRule(index)
+      return products.map((p) => ({ id: p.id, name: p.name }))
+    }
 
     // Try to get from selectedItems
     if (selectedItems.has(index)) {
@@ -295,7 +388,9 @@ export function ProductExclusionRule({ rules, onRulesChange }: ProductExclusionR
   const handleInputClick = (index: number, type: string) => {
     setCurrentEditingIndex(index)
 
-    if (["brand", "category", "custom_field", "product_option"].includes(type)) {
+    if (type === "individual") {
+      setShowProductModal(true)
+    } else if (["brand", "category", "custom_field", "product_option"].includes(type)) {
       setCurrentSelectorType(type as "brand" | "category" | "custom_field" | "product_option")
       setShowSelectorModal(true)
     }
@@ -451,6 +546,15 @@ export function ProductExclusionRule({ rules, onRulesChange }: ProductExclusionR
           )}
         </>
       )}
+
+      {/* Product Search Modal */}
+      <ProductSearchModal
+        isOpen={showProductModal}
+        onClose={() => setShowProductModal(false)}
+        onSelect={(products) => handleProductSelect(currentEditingIndex, products)}
+        selectedProduct={selectedProducts.get(currentEditingIndex) || null}
+        multiple={true} // Allow multiple product selection for exclusion rules
+      />
 
       {/* Selector Modal for brands, categories, etc. */}
       <SelectorModal

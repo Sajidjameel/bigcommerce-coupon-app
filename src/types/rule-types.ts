@@ -16,10 +16,12 @@ export type Rule = {
       giftQuantity?: number
       giftProduct?: string
       shippingZoneType?: "all" | "selected"
-      selectedZones?: string[]
+    
+      selectedZones?: Zone[] // Updated to Zone[] instead of string[]
       frequency?: string
       // Fields for product conditions
       reachingType?: "quantity" | "total_value"
+
       reachingQuantity?: number
       reachingValue?: number
       inclusionRule?: InclusionRule
@@ -36,7 +38,12 @@ export type Rule = {
       rewardExclusionRules?: ExclusionRule[]
     }
   }
-
+  interface Zone {
+    zoneid: number
+    name: string
+    enabled: boolean
+  }
+  
 
   /**
  * Product interface representing a BigCommerce product
@@ -113,7 +120,7 @@ export interface InclusionRule {
   }
   
   export const CONDITION_OPTIONS: ConditionOption[] = [ 
-    { value: "please_select", label: "Please select a value", disabled: true },
+   { value: "please_select", label: "Please select a value", disabled: true },
     { value: "buys_products", label: "Buys Products" },
     { value: "reaches_subtotal", label: "Reaches an order sub-total" },
     { value: "no_conditions", label: "No conditions" },

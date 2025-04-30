@@ -1,8 +1,16 @@
 "use client"
 
+import { useState, useEffect } from "react"
+import { Search, X } from "lucide-react"
 import type { Rule } from "@/types/rule-types"
 import { SHIPPING_ZONE_OPTIONS } from "@/types/rule-types"
-import { Search } from "lucide-react"
+import { ZoneSelectionModal } from "@/components/UI/zone-selection"
+
+interface Zone {
+  zoneid: number
+  name: string
+  enabled: boolean
+}
 
 interface FreeShippingRewardProps {
   rule: Rule
@@ -10,6 +18,26 @@ interface FreeShippingRewardProps {
 }
 
 export function FreeShippingReward({ rule, onConfigChange }: FreeShippingRewardProps) {
+  const [showZoneModal, setShowZoneModal] = useState(false)
+  const [selectedZones, setSelectedZones] = useState<Zone[]>(rule.config.selectedZones || [])
+
+  // Update the rule when selected zones change
+  useEffect(() => {
+    if (rule.config.shippingZoneType === "selected") {
+      onConfigChange("selectedZones", selectedZones)
+    }
+  }, [selectedZones, rule.config.shippingZoneType, onConfigChange])
+
+  // Handle zone selection from modal
+  const handleZoneSelection = (zones: Zone[]) => {
+    setSelectedZones(zones)
+  }
+
+  // Remove a zone from selection
+  const removeZone = (zoneId: number) => {
+    setSelectedZones(selectedZones.filter((zone) => zone.zoneid !== zoneId))
+  }
+
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
@@ -45,14 +73,41 @@ export function FreeShippingReward({ rule, onConfigChange }: FreeShippingRewardP
             <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
               <Search className="w-4 h-4 text-gray-500" />
             </div>
-            <input
-              type="text"
-              className="w-full border border-gray-300 rounded pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Click to add zones"
-            />
+            <div
+              className="w-full border border-gray-300 rounded pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 min-h-[38px] flex items-center flex-wrap gap-1 cursor-pointer"
+              onClick={() => setShowZoneModal(true)}
+            >
+              {selectedZones.length > 0 ? (
+                selectedZones.map((zone, index) => (
+                  <div key={zone.zoneid} className="bg-gray-200 rounded px-2 py-0.5 flex items-center gap-1">
+                    <span>{zone.name}</span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        removeZone(zone.zoneid)
+                      }}
+                      className="text-gray-500 hover:text-gray-700"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <span className="text-gray-500">Click to add zones</span>
+              )}
+            </div>
           </div>
         </div>
       )}
+
+      {/* Zone Selection Modal */}
+      <ZoneSelectionModal
+        isOpen={showZoneModal}
+        onClose={() => setShowZoneModal(false)}
+        onApply={handleZoneSelection}
+        initialSelectedZones={selectedZones}
+      />
     </div>
   )
 }

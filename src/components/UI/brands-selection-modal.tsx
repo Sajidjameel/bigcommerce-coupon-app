@@ -1,9 +1,19 @@
 "use client"
 
 import type React from "react"
-
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Search } from "lucide-react"
+
+// Create a global cache for brands data
+let brandsCache: {
+  data: Brand[]
+  pagination: {
+    total_pages: number
+    current_page: number
+    total: number
+  }
+  searchTerm: string
+} | null = null
 
 interface Brand {
   id: number
@@ -34,12 +44,23 @@ export function BrandSelectionModal({
   const [totalPages, setTotalPages] = useState(1)
   const [totalItems, setTotalItems] = useState(0)
   const modalRef = useRef<HTMLDivElement>(null)
+  const hasInitializedRef = useRef(false)
 
   // State for selected brands
   const [selectedBrands, setSelectedBrands] = useState<Brand[]>(initialSelectedBrands || [])
 
-  // Fetch brands from API
-  const fetchBrands = async (page = 1, search = "") => {
+  // Fetch brands from API with caching
+  const fetchBrands = useCallback(async (page = 1, search = "") => {
+    // Check if we have cached data for this search term and page
+    if (brandsCache && brandsCache.searchTerm === search && brandsCache.pagination.current_page === page) {
+      console.log("Using cached brands data")
+      setBrands(brandsCache.data)
+      setTotalPages(brandsCache.pagination.total_pages)
+      setCurrentPage(brandsCache.pagination.current_page)
+      setTotalItems(brandsCache.pagination.total)
+      return
+    }
+
     setLoading(true)
     setError(null)
 
@@ -51,6 +72,7 @@ export function BrandSelectionModal({
       }
       queryParams.append("page", page.toString())
 
+      console.log("Fetching brands from API")
       // Make API request
       const response = await fetch(`/api/brands?${queryParams.toString()}`)
 
@@ -72,10 +94,32 @@ export function BrandSelectionModal({
         setTotalPages(data.meta.pagination.total_pages || 1)
         setCurrentPage(data.meta.pagination.current_page || 1)
         setTotalItems(data.meta.pagination.total || data.data.length)
+
+        // Update the cache
+        brandsCache = {
+          data: data.data,
+          pagination: {
+            total_pages: data.meta.pagination.total_pages || 1,
+            current_page: data.meta.pagination.current_page || 1,
+            total: data.meta.pagination.total || data.data.length,
+          },
+          searchTerm: search,
+        }
       } else {
         setTotalPages(1)
         setCurrentPage(1)
         setTotalItems(data.data.length)
+
+        // Update the cache
+        brandsCache = {
+          data: data.data,
+          pagination: {
+            total_pages: 1,
+            current_page: 1,
+            total: data.data.length,
+          },
+          searchTerm: search,
+        }
       }
     } catch (err) {
       console.error("Error fetching brands:", err)
@@ -94,10 +138,21 @@ export function BrandSelectionModal({
       setTotalPages(1)
       setCurrentPage(1)
       setTotalItems(mockBrands.length)
+
+      // Update the cache with mock data
+      brandsCache = {
+        data: mockBrands,
+        pagination: {
+          total_pages: 1,
+          current_page: 1,
+          total: mockBrands.length,
+        },
+        searchTerm: search,
+      }
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   // Handle search form submission
   const handleSearch = (e: React.FormEvent) => {
@@ -108,15 +163,17 @@ export function BrandSelectionModal({
   // Handle pagination
   const handlePreviousPage = () => {
     if (currentPage > 1) {
-      setCurrentPage((prev) => prev - 1)
-      fetchBrands(currentPage - 1, searchTerm)
+      const newPage = currentPage - 1
+      setCurrentPage(newPage)
+      fetchBrands(newPage, searchTerm)
     }
   }
 
   const handleNextPage = () => {
     if (currentPage < totalPages) {
-      setCurrentPage((prev) => prev + 1)
-      fetchBrands(currentPage + 1, searchTerm)
+      const newPage = currentPage + 1
+      setCurrentPage(newPage)
+      fetchBrands(newPage, searchTerm)
     }
   }
 
@@ -150,14 +207,25 @@ export function BrandSelectionModal({
   useEffect(() => {
     if (isOpen) {
       setSearchTerm("")
-      fetchBrands(1)
+
+      // Only fetch brands if we don't have cached data or this is the first time opening
+      if (!brandsCache || !hasInitializedRef.current) {
+        fetchBrands(1)
+        hasInitializedRef.current = true
+      } else {
+        // Use cached data
+        setBrands(brandsCache.data)
+        setTotalPages(brandsCache.pagination.total_pages)
+        setCurrentPage(brandsCache.pagination.current_page)
+        setTotalItems(brandsCache.pagination.total)
+      }
 
       // Initialize selected brands if provided
       if (initialSelectedBrands && initialSelectedBrands.length > 0) {
         setSelectedBrands(initialSelectedBrands)
       }
     }
-  }, [isOpen, initialSelectedBrands])
+  }, [isOpen, initialSelectedBrands, fetchBrands])
 
   // Close modal when clicking outside
   useEffect(() => {
@@ -278,7 +346,10 @@ export function BrandSelectionModal({
             <button onClick={onClose} className="px-4 py-2 text-blue-600 hover:underline cursor-pointer">
               Cancel
             </button>
-            <button onClick={handleApply} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 cursor-pointer">
+            <button
+              onClick={handleApply}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 cursor-pointer"
+            >
               Apply
             </button>
           </div>

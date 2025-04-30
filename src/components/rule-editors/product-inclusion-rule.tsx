@@ -1,8 +1,8 @@
 "use client"
 import { type InclusionRule, PRODUCT_INCLUSION_OPTIONS, type Product } from "@/types/rule-types"
 import { Search, Trash2 } from "lucide-react"
-import { useState } from "react"
-import { ProductSearchModal } from "@/components/UI/Product-search-modal"
+import { useState, useEffect } from "react"
+import { ProductSearchModal } from "../UI/Product-search-modal"
 import { SelectorModal } from "../UI/select-modal"
 import { TagInput } from "../UI/tag-input"
 
@@ -54,6 +54,36 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
   // Store selected items for each rule to preserve values when reopening modals
   const [selectedItems, setSelectedItems] = useState<Map<number, SelectorItem[]>>(new Map())
 
+  // Initialize selectedProducts from rules when component mounts or rules change
+  useEffect(() => {
+    const newSelectedProducts = new Map<number, Product[]>()
+
+    inclusionRules.forEach((rule, index) => {
+      if (rule.type === "individual" && rule.value) {
+        try {
+          // Try to parse product IDs from the rule value
+          const productIds = rule.value.split(",").map((id) => Number.parseInt(id.trim(), 10))
+
+          // Create placeholder products with the information we have
+          const products = productIds.map((id) => ({
+            id,
+            name: rule.selector || `Product ${id}`,
+            sku: "",
+            price: 0,
+            primary_image: null,
+          }))
+
+          newSelectedProducts.set(index, products)
+        } catch (e) {
+          // If parsing fails, set empty array
+          newSelectedProducts.set(index, [])
+        }
+      }
+    })
+
+    setSelectedProducts(newSelectedProducts)
+  }, [rule])
+
   const handleTypeChange = (index: number, type: string) => {
     let updatedRules = [...inclusionRules]
 
@@ -82,15 +112,6 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
     updateOriginalStructure(updatedRules)
   }
 
-  const handleSelectorChange = (index: number, selector: string) => {
-    const updatedRules = [...inclusionRules]
-    updatedRules[index] = {
-      ...updatedRules[index],
-      selector,
-    }
-    updateOriginalStructure(updatedRules)
-  }
-
   const handleAddInclusionRule = () => {
     const updatedRules = [
       ...inclusionRules,
@@ -108,6 +129,11 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
     const updatedSelectedItems = new Map(selectedItems)
     updatedSelectedItems.delete(index)
     setSelectedItems(updatedSelectedItems)
+
+    // Remove selected products for this rule
+    const updatedSelectedProducts = new Map(selectedProducts)
+    updatedSelectedProducts.delete(index)
+    setSelectedProducts(updatedSelectedProducts)
   }
 
   const handleProductSelect = (index: number, products: Product[] | Product) => {
@@ -120,11 +146,8 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
 
     // Compute selector display text
     let selectorText = ""
-    if (selectedProductArray.length === 1) {
+    if (selectedProductArray.length > 0) {
       selectorText = selectedProductArray[0].name
-    } else {
-      // For multiple products, show the first product's name and the count of other selected products
-      selectorText = `${selectedProductArray[0].name} +${selectedProductArray.length - 1}`
     }
 
     // Build the value (always all IDs)
@@ -175,7 +198,7 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
 
     // Compute selector display text
     let selectorText = ""
-    if (selectedItemsArray.length === 1) {
+    if (selectedItemsArray.length > 0) {
       const item = selectedItemsArray[0]
 
       // Special handling for custom fields
@@ -192,9 +215,6 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
       } else {
         selectorText = item.name
       }
-    } else {
-      // For multiple items, show the first item's name and the count of other selected items
-      selectorText = `${selectedItemsArray[0].name} +${selectedItemsArray.length - 1}`
     }
 
     // Build the value (always all IDs)
@@ -331,6 +351,35 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
     return []
   }
 
+  // Get selected products for a rule
+  const getSelectedProductsForRule = (index: number): Product[] => {
+    if (selectedProducts.has(index)) {
+      return selectedProducts.get(index) || []
+    }
+
+    // Try to parse from the rule value if we don't have it in state
+    const rule = inclusionRules[index]
+    if (rule && rule.type === "individual" && rule.value) {
+      try {
+        // Try to parse product IDs from the rule value
+        const productIds = rule.value.split(",").map((id) => Number.parseInt(id.trim(), 10))
+
+        // Create placeholder products with the information we have
+        return productIds.map((id) => ({
+          id,
+          name: rule.selector || `Product ${id}`,
+          sku: "",
+          price: 0,
+          primary_image: null,
+        }))
+      } catch (e) {
+        return []
+      }
+    }
+
+    return []
+  }
+
   // Convert the array structure back to the original inclusion rule structure
   const updateOriginalStructure = (rules: RuleItem[]) => {
     if (rules.length === 0) {
@@ -397,7 +446,7 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
     }
 
     // Start with the "please_select" option for additional rules
-    const options = currentType === "please_select" ? [{ value: "please_select", label: "Please select a value" }] : []
+    const options = currentType === "please_select" ? [{ value: "please_select", label: "Please select a value  " }] : []
 
     // Add the filtered product options
     const filteredOptions = PRODUCT_INCLUSION_OPTIONS.filter((option) => {
@@ -437,8 +486,9 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
     if (!rule || !rule.value || !rule.selector) return []
 
     // For individual products
-    if (rule.type === "individual" && selectedProducts.has(index)) {
-      return selectedProducts.get(index)?.map((p) => ({ id: p.id, name: p.name })) || []
+    if (rule.type === "individual") {
+      const products = getSelectedProductsForRule(index)
+      return products.map((p) => ({ id: p.id, name: p.name }))
     }
 
     // For other types, try to get from selectedItems
@@ -553,14 +603,17 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
 
       {/* Product Search Modal */}
       <ProductSearchModal
+        key={`product-modal-${currentEditingIndex}`}
         isOpen={showProductModal}
         onClose={() => setShowProductModal(false)}
         onSelect={(products) => handleProductSelect(currentEditingIndex, products)}
+        selectedProduct={selectedProducts.get(currentEditingIndex) || null}
         multiple={true} // Allow multiple product selection for inclusion rules
       />
 
       {/* Selector Modal for brands, categories, etc. */}
       <SelectorModal
+       key={`selector-modal-${currentEditingIndex}`}
         isOpen={showSelectorModal}
         onClose={() => setShowSelectorModal(false)}
         onSelect={(items) => handleSelectorSelect(currentEditingIndex, items)}
