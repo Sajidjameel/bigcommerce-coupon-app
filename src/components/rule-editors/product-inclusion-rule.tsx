@@ -580,7 +580,7 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
                   className="text-blue-600 hover:text-blue-800"
                   disabled={index > 0 && isFirstRuleIndividualOrAll}
                 >
-                  <Trash2 className={`w-5 h-5 ${index > 0 && isFirstRuleIndividualOrAll ? "opacity-50" : ""}`} />
+                  <Trash2 className={`w-5 h-5 cursor-pointer ${index > 0 && isFirstRuleIndividualOrAll ? "opacity-50" : ""}`} />
                 </button>
               )}
             </div>

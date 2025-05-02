@@ -343,7 +343,7 @@ export function BrandSelectionModal({
 
           {/* Action Buttons */}
           <div className="flex justify-end gap-2">
-            <button onClick={onClose} className="px-4 py-2 text-blue-600 hover:underline cursor-pointer">
+            <button onClick={onClose} className="px-4 py-2 text-blue-600 hover:text-blue-500 cursor-pointer">
               Cancel
             </button>
             <button
