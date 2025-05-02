@@ -30,9 +30,6 @@ export function ZoneSelectionModal({
   const [error, setError] = useState<string | null>(null)
   const modalRef = useRef<HTMLDivElement>(null)
 
-
-
-  
   const fetchZones = useCallback(async () => {
     if (zonesCache) {
       setZones(zonesCache)
@@ -47,8 +44,9 @@ export function ZoneSelectionModal({
       if (!response.ok) throw new Error(`Failed to fetch zones (${response.status})`)
 
       const data = await response.json()
+
       const processedZones = data.map((zone: any) => ({
-        zoneid: zone.zoneid,
+        zoneid: zone.id,
         name: zone.name,
         enabled: zone.enabled,
       }))
@@ -79,7 +77,7 @@ export function ZoneSelectionModal({
   useEffect(() => {
     if (isOpen) {
       fetchZones()
-  
+
       // Only update selected zones if they're not already set
       setSelectedZoneIds(prev => {
         if (prev.size === 0) {
@@ -107,9 +105,9 @@ export function ZoneSelectionModal({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div
         ref={modalRef}
-        className="bg-white rounded-md shadow-lg w-[600px] h-[50vh] max-h-[90vh] overflow-hidden"
+        className="bg-white rounded-md shadow-lg w-[90vw] max-w-[600px] max-h-[90vh] flex flex-col"
       >
-        <div className="p-6">
+        <div className="flex flex-col p-6 flex-grow overflow-hidden">
           <h2 className="text-xl font-medium mb-6">Select Zones</h2>
 
           {Array.from(selectedZoneIds).length > 0 && (
@@ -127,7 +125,7 @@ export function ZoneSelectionModal({
                         e.stopPropagation()
                         toggleZone(zone.zoneid)
                       }}
-                      className="text-gray-500 hover:text-gray-700"
+                      className="text-gray-500 cursor-pointer hover:text-gray-700"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -136,7 +134,7 @@ export function ZoneSelectionModal({
             </div>
           )}
 
-          <div className="overflow-y-auto max-h-[400px]">
+          <div className="overflow-y-auto ">
             {loading ? (
               <div className="py-4 text-center">
                 <div className="inline-block h-6 w-6 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" />

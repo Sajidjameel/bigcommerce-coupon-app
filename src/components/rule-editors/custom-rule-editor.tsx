@@ -155,7 +155,7 @@ export function CustomRuleEditor({ rule, onRuleChange, onSave, onCancel, onSwitc
       case "no_conditions":
         return <NoConditionsCondition />
       default:
-        return <NoConditionsCondition />
+        return null
     }
   }
 

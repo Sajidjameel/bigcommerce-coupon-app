@@ -26,7 +26,7 @@ export function FreeShippingReward({ rule, onConfigChange }: FreeShippingRewardP
     if (rule.config.shippingZoneType === "selected") {
       onConfigChange("selectedZones", selectedZones)
     }
-  }, [selectedZones, rule.config.shippingZoneType, onConfigChange])
+  }, [selectedZones])
 
   // Handle zone selection from modal
   const handleZoneSelection = (zones: Zone[]) => {
@@ -102,12 +102,14 @@ export function FreeShippingReward({ rule, onConfigChange }: FreeShippingRewardP
       )}
 
       {/* Zone Selection Modal */}
-      <ZoneSelectionModal
-        isOpen={showZoneModal}
-        onClose={() => setShowZoneModal(false)}
-        onApply={handleZoneSelection}
-        initialSelectedZones={selectedZones}
-      />
+      {/* {showZoneModal &&  */}
+        <ZoneSelectionModal
+          isOpen={showZoneModal}
+          onClose={() => setShowZoneModal(false)}
+          onApply={handleZoneSelection}
+          initialSelectedZones={selectedZones}
+        />
+      {/* } */}
     </div>
   )
 }

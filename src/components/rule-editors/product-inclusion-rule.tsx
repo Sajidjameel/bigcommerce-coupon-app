@@ -437,36 +437,25 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
 
   // Get available options for a specific rule
   const getAvailableOptions = (currentIndex: number) => {
-    // Get the current rule's type
-    const currentType = inclusionRules[currentIndex]?.type
-
-    // For the first rule, show all options
+    const currentType = inclusionRules[currentIndex]?.type;
+  
     if (currentIndex === 0) {
-      return PRODUCT_INCLUSION_OPTIONS
+      return PRODUCT_INCLUSION_OPTIONS;
     }
-
-    // Start with the "please_select" option for additional rules
-    const options = currentType === "please_select" ? [{ value: "please_select", label: "Please select a value  " }] : []
-
-    // Add the filtered product options
+  
     const filteredOptions = PRODUCT_INCLUSION_OPTIONS.filter((option) => {
-      // If this is the current rule with this type, include it
-      if (option.value === currentType) return true
-
-      // Don't show "individual" or "all" for additional rules
-      if (option.value === "individual" || option.value === "all") return false
-
-      // If the type is "category" or "brand", only include if not already selected
+      if (option.value === "please_select") return false; // <-- prevent duplicate
+      if (option.value === currentType) return true;
+      if (option.value === "individual" || option.value === "all") return false;
       if ((option.value === "category" || option.value === "brand") && isTypeSelected(option.value)) {
-        return false
+        return false;
       }
-
-      // Include all other options
-      return true
-    })
-
-    return [...options, ...filteredOptions]
-  }
+      return true;
+    });
+  
+    return [{ value: "please_select", label: "Please select a value", disabled: true }, ...filteredOptions];
+  };
+  
 
   // Handle input click to open appropriate modal
   const handleInputClick = (index: number, type: string) => {
