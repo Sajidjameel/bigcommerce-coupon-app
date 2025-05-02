@@ -26,7 +26,6 @@ export function ProductSearchModal({
 
   const [selectedProducts, setSelectedProducts] = useState<Product[]>([])
   const [searchTerm, setSearchTerm] = useState("")
-  const [lastSearchTerm, setLastSearchTerm] = useState("") // Added state to track last search term
   const modalRef = useRef<HTMLDivElement>(null)
   const isInitialMount = useRef(true)
   const searchInputRef = useRef<HTMLInputElement>(null)
@@ -41,9 +40,6 @@ export function ProductSearchModal({
       } else {
         setSelectedProducts([])
       }
-
-      // Reset search term when opening modal
-      setSearchTerm("")
 
       // Only fetch products on initial open if we haven't already
       if (isInitialMount.current) {
@@ -76,20 +72,18 @@ export function ProductSearchModal({
   }
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Just update the search term, don't filter yet
     setSearchTerm(e.target.value)
   }
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    // Only perform search when form is submitted (Enter key or Search button)
-    setLastSearchTerm(searchTerm) // Update last search term
+    // Perform search with the current search term
     fetchProducts(1, searchTerm)
   }
 
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages && page !== currentPage) {
-      // Always fetch the new page data to ensure we have the latest
+      // Always fetch the new page data with the current search term
       fetchProducts(page, searchTerm)
     }
   }
@@ -155,7 +149,7 @@ export function ProductSearchModal({
                 } text-white rounded`}
                 disabled={loading}
               >
-                {loading ? "Searching..." : "Search"}
+                {loading ? "Search" : "Search"}
               </button>
             </div>
           </form>
@@ -312,3 +306,10 @@ export function ProductSearchModal({
     </div>
   )
 }
+
+
+
+
+
+
+

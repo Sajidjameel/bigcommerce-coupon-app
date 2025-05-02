@@ -284,9 +284,16 @@ export function BrandSelectionModal({
 
             <div className="overflow-y-auto max-h-[calc(90vh-250px)]">
               {loading ? (
-                <div className="py-4 text-center">
-                  <div className="inline-block h-6 w-6 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
-                  <p className="mt-2">Loading brands...</p>
+                // Skeleton loading UI
+                <div className="divide-y divide-gray-200">
+                  {[...Array(5)].map((_, index) => (
+                    <div key={`skeleton-${index}`} className="py-3 animate-pulse">
+                      <div className="flex items-center space-x-12">
+                        <div className="h-4 w-4 bg-gray-200 rounded"></div>
+                        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : error ? (
                 <div className="py-4 text-center text-red-500">{error}</div>
@@ -299,7 +306,7 @@ export function BrandSelectionModal({
                       <label className="flex items-center space-x-12 cursor-pointer">
                         <input
                           type="checkbox"
-                          className="form-checkbox  bg-blend-color  h-4 w-4 text-blue-600 cursor-pointer border-gray-100  focus:ring-blue-500"
+                          className="form-checkbox bg-blend-color h-4 w-4 text-blue-600 cursor-pointer border-gray-100 focus:ring-blue-500"
                           checked={selectedBrands.some((b) => b.id === brand.id)}
                           onChange={() => toggleBrandSelection(brand)}
                         />

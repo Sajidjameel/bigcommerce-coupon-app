@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import type { Rule, Product } from "@/types/rule-types"
 import { QuantitySelector } from "@/components/UI/Quantity-selector"
-import { ProductSelector } from "@/components/UI/Product-selector"
+import { Search } from "lucide-react"
+import { TagInput } from "@/components/UI/tag-input"
 import { ProductSearchModal } from "@/components/UI/Product-search-modal"
 
 interface GiftCartRewardProps {
@@ -24,6 +25,13 @@ export function GiftCartReward({ rule, onConfigChange }: GiftCartRewardProps) {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [showProductModal, setShowProductModal] = useState(false)
 
+  // Initialize selected product from rule config
+  useEffect(() => {
+    if (rule?.config?.giftProduct && typeof rule.config.giftProduct === 'object') {
+      setSelectedProduct(rule.config.giftProduct)
+    }
+  }, [rule?.config?.giftProduct])
+
   /**
    * Handles quantity changes
    */
@@ -36,10 +44,15 @@ export function GiftCartReward({ rule, onConfigChange }: GiftCartRewardProps) {
    */
   const handleProductSelect = (product: Product | Product[]) => {
     const selected = Array.isArray(product) ? product[0] : product
-    console.log("Selected product:", selected)
     setSelectedProduct(selected)
-    onConfigChange("giftProduct", selected.sku)
+    onConfigChange("giftProduct", selected)
     setShowProductModal(false)
+  }
+
+  // Convert selected product to tag format
+  const getSelectedItems = () => {
+    if (!selectedProduct) return []
+    return [{ id: selectedProduct.id, name: selectedProduct.name }]
   }
 
   return (
@@ -50,8 +63,19 @@ export function GiftCartReward({ rule, onConfigChange }: GiftCartRewardProps) {
       {/* Quantity Selector Component */}
       <QuantitySelector quantity={giftQuantity} onChange={handleGiftQuantityChange} />
 
-      {/* Product Selector Component */}
-      <ProductSelector selectedProduct={selectedProduct} onOpenModal={() => setShowProductModal(true)} />
+      {/* Product Selector - Replaced with the abstracted version */}
+      <div className="relative flex-1 max-w-xs">
+        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+          <Search className="w-4 h-4 text-gray-500" />
+        </div>
+        <TagInput
+          tags={getSelectedItems()}
+          placeholder="Click to select a product"
+          onClick={() => setShowProductModal(true)}
+        />
+      </div>
+
+      <span className="text-sm">in the customer&apos;s cart for free.</span>
 
       {/* Product Search Modal Component */}
       <ProductSearchModal
@@ -61,8 +85,6 @@ export function GiftCartReward({ rule, onConfigChange }: GiftCartRewardProps) {
         selectedProduct={selectedProduct}
         multiple={false} // For gift rule, only one product allowed
       />
-
-      <span className="text-sm">in the customer&apos;s cart for free.</span>
     </div>
   )
 }

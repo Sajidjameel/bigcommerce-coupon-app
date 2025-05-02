@@ -262,10 +262,7 @@ export function CategorySelectorModal({
               onChange={() => toggleCategorySelection(category, path)}
               className="mr-2 rounded size-4 opacity-70 border-gray-50 text-blue-600 focus:ring-blue-600 cursor-pointer "
             />
-            <label
-              htmlFor={`category-${category.tree_id}-${category.category_id}`}
-              className="flex items-center "
-            >
+            <label htmlFor={`category-${category.tree_id}-${category.category_id}`} className="flex items-center ">
               <div className="flex items-center">
                 <span className="text-blue-500 cursor-pointer">📁</span>
                 <span className="ml-1">{category.name}</span>
@@ -284,6 +281,31 @@ export function CategorySelectorModal({
     )
   }
 
+  // Render skeleton loading UI for categories
+  const renderSkeletonCategories = () => {
+    return (
+      <div className="animate-pulse">
+        {[...Array(2)].map((_, index) => (
+          <div
+            key={`skeleton-category-${index}`}
+            className={`flex items-center px-4 py-3 rounded ${
+              index === 1 ? "bg-gray-50" : ""
+            }`}
+          >
+            {/* Chevron icon placeholder */}
+            <div className="w-4 h-4 bg-gray-200 rounded-sm mr-3"></div>
+  
+            {/* Store/category icon */}
+            <div className="w-5 h-5 bg-gray-300 rounded mr-3"></div>
+  
+            {/* Label line */}
+            <div className="h-4 bg-gray-200 rounded w-32"></div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+  
   // Handle apply button click
   const handleApply = () => {
     const selectedArray = Array.from(selectedCategories.values())
@@ -304,7 +326,8 @@ export function CategorySelectorModal({
         <h2 className="text-xl font-medium mb-4">Select Categories</h2>
 
         {loading ? (
-          <div className="py-4 text-center">Loading categories...</div>
+          // Skeleton loading UI
+          <div className="mb-6 max-h-[60vh] overflow-y-auto">{renderSkeletonCategories()}</div>
         ) : error ? (
           <div className="py-4 text-center text-red-500">{error}</div>
         ) : (
@@ -332,7 +355,11 @@ export function CategorySelectorModal({
         )}
 
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-blue-600 hover:text-blue-800 rounded cursor-pointer">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-blue-600 hover:text-blue-800 rounded cursor-pointer"
+          >
             Cancel
           </button>
           <button

@@ -128,10 +128,10 @@ export function FixedPriceReward({ rule, onConfigChange }: FixedPriceRewardProps
       </div>
 
       {/* Product Inclusion Rule for Reward */}
-      <div className="flex items-center gap-2">
+      {/* <div className="flex items-center gap-2">
         <div className="w-2 h-2 bg-yellow-500 rounded-full" />
         <span className="text-sm">Including products</span>
-      </div>
+      </div> */}
       {rewardInclusionRule && (
         <ProductInclusionRule rule={rewardInclusionRule} onRuleChange={handleRewardInclusionRuleChange} />
       )}

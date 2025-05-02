@@ -249,16 +249,16 @@ export function ProductExclusionRule({ rules, onRulesChange }: ProductExclusionR
   const getInitialSelectedItems = (index: number): SelectorItem[] => {
     // If we have stored selected items for this rule, return them
     if (selectedItems.has(index)) {
-      return selectedItems.get(index) || []
+      return selectedItems.get(index) || [];
     }
-
+  
     // Otherwise, try to parse from the rule value
-    const rule = rules[index]
-    if (!rule || !rule.value) return []
-
+    const rule = rules[index];
+    if (!rule || !rule.value) return [];
+  
     try {
       if (rule.type === "custom_field") {
-        const parsedValue = JSON.parse(rule.value)
+        const parsedValue = JSON.parse(rule.value);
         if (parsedValue.fieldName && parsedValue.fieldValues) {
           return [
             {
@@ -267,10 +267,10 @@ export function ProductExclusionRule({ rules, onRulesChange }: ProductExclusionR
               fieldName: parsedValue.fieldName,
               fieldValues: parsedValue.fieldValues,
             },
-          ]
+          ];
         }
       } else if (rule.type === "product_option") {
-        const parsedValue = JSON.parse(rule.value)
+        const parsedValue = JSON.parse(rule.value);
         if (parsedValue.optionName && parsedValue.optionValues) {
           return [
             {
@@ -279,58 +279,43 @@ export function ProductExclusionRule({ rules, onRulesChange }: ProductExclusionR
               optionName: parsedValue.optionName,
               optionValues: parsedValue.optionValues,
             },
-          ]
+          ];
         }
       } else if (rule.type === "category") {
-        // Try to parse as array of category objects
         try {
-          return rule.value
-            .split(",")
-            .map((val) => {
-              let parsedVal
-              try {
-                parsedVal = JSON.parse(val)
-              } catch (e) {
-                console.error("Error parsing category value:", e)
-                return null // Or handle the error as appropriate
-              }
-              return {
-                id: parsedVal.id,
-                name: parsedVal.name,
-                channelId: parsedVal.channelId,
-                channelName: parsedVal.channelName,
-                path: parsedVal.path,
-              }
-            })
-            .filter((item) => item !== null) as SelectorItem[]
-        } catch (e) {
-          // If parsing as array fails, try as single object
-          try {
-            const parsedValue = JSON.parse(rule.value)
-            if (parsedValue.id) {
-              return [
-                {
-                  id: parsedValue.id,
-                  name: parsedValue.name,
-                  channelId: parsedValue.channelId,
-                  channelName: parsedValue.channelName,
-                  path: parsedValue.path,
-                },
-              ]
-            }
-          } catch (e) {
-            return []
+          const parsed = JSON.parse(rule.value);
+          if (Array.isArray(parsed)) {
+            return parsed.map((cat) => ({
+              id: cat.id,
+              name: cat.name,
+              channelId: cat.channelId,
+              channelName: cat.channelName,
+              path: cat.path,
+            }));
+          } else if (parsed && parsed.id) {
+            return [
+              {
+                id: parsed.id,
+                name: parsed.name,
+                channelId: parsed.channelId,
+                channelName: parsed.channelName,
+                path: parsed.path,
+              },
+            ];
           }
+        } catch (e) {
+          console.error("Error parsing category rule:", e);
+          return [];
         }
       }
     } catch (e) {
       // If parsing fails, return empty array
-      return []
+      return [];
     }
-
-    return []
-  }
-
+  
+    return [];
+  };
+  
   // Get selected products for a rule
   const getSelectedProductsForRule = (index: number): Product[] => {
     if (selectedProducts.has(index)) {

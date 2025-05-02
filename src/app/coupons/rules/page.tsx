@@ -12,6 +12,8 @@ export default function Rules() {
   const [showRuleEditor, setShowRuleEditor] = useState<boolean>(false)
   const [currentRule, setCurrentRule] = useState<Rule | null>(null)
   const [editingRuleId, setEditingRuleId] = useState<string | null>(null)
+  const [showRewardOptions, setShowRewardOptions] = useState<boolean>(false);
+  const [rewardType, setRewardType] = useState<'tiered' | 'stacked' | null>(null);
 
   const handleAddRule = (): void => {
     setShowRuleModal(true)
@@ -141,7 +143,7 @@ export default function Rules() {
   const handleEditRule = (ruleId: string): void => {
     const ruleToEdit = rules.find((rule) => rule.id === ruleId)
     if (ruleToEdit) {
-      if (ruleToEdit.type === "custom" && ruleToEdit.condition === "buys_products") {
+      if (ruleToEdit.type === "custom" && ruleToEdit.condition === "buysProducts") {
         const config = ruleToEdit.config as any
 
         if (config.inclusionRules && !config.inclusionRule) {
@@ -186,6 +188,7 @@ export default function Rules() {
         id: `rule-${Date.now()}`,
       }
       setRules([...rules, copiedRule])
+      setShowRewardOptions(true);
     }
   }
 
@@ -198,10 +201,11 @@ export default function Rules() {
     setCurrentRule(updatedRule)
   }
 
+  
   return (
-    <div className="bg-white rounded-none shadow p-6 overflow-hidden">
+    <div className="bg-white rounded-none shadow-sm p-6 overflow-hidden">
       <h3 className="text-xl font-medium mb-2">Rules</h3>
-      <p className="text-sm text-gray-700 mb-4 border-b pb-4">
+      <p className="text-sm text-gray-700 mb-4 border-b border-gray-300 pb-4">
         What conditions must a customer satisfy to receive the reward you&apos;re offering?
       </p>
 
@@ -229,9 +233,14 @@ export default function Rules() {
           <button
             type="button"
             onClick={handleCopyLastRule}
-            className="flex items-center text-blue-600 hover:text-blue-800 text-sm"
+            className="flex cursor-pointer items-center text-blue-600 hover:text-blue-800 text-sm"
           >
-            <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+            <svg
+              className="cursor-pointer w-4 h-4 mr-1"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+              xmlns="http://www.w3.org/2000/svg"
+            >
               <path d="M7 9a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9z" />
               <path d="M5 3a2 2 0 00-2 2v6a2 2 0 002 2V5h8a2 2 0 00-2-2H5z" />
             </svg>
@@ -239,6 +248,46 @@ export default function Rules() {
           </button>
         )}
       </div>
+
+      {showRewardOptions && (
+        <div className="mt-6">
+          <p className="font-bold mb-2">How many of the above rewards can customers have?</p>
+
+          <div className="flex items-start gap-2 mb-2">
+            <input
+              type="radio"
+              name="rewardOption"
+              id="tiered"
+              checked={rewardType === 'tiered'}
+              onChange={() => setRewardType('tiered')}
+              className="mt-1 size-4 cursor-pointer"
+            />
+            <label htmlFor="tiered">
+              <div className="font-medium">Tiered reward</div>
+              <div className="text-sm text-gray-600">
+                Give the last reward customer qualifies for ("get 10% off" OR "get 15% off")
+              </div>
+            </label>
+          </div>
+
+          <div className="flex items-start gap-2">
+            <input
+              type="radio"
+              name="rewardOption"
+              id="stacked"
+              checked={rewardType === 'stacked'}
+              onChange={() => setRewardType('stacked')}
+              className="mt-1 size-4 cursor-pointer"
+            />
+            <label htmlFor="stacked">
+              <div className="font-medium">Stacked rewards</div>
+              <div className="text-sm text-gray-600">
+                Give all rewards customer qualifies for ("get 10% off" AND "free shipping")
+              </div>
+            </label>
+          </div>
+        </div>
+      )}
 
       {showRuleModal && (
         <RuleTypeModal onClose={() => setShowRuleModal(false)} onSelectRuleType={handleRuleTypeSelect} />
@@ -257,5 +306,5 @@ export default function Rules() {
         </>
       )}
     </div>
-  )
+  );
 }

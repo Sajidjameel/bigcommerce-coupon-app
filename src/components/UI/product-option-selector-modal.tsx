@@ -48,7 +48,7 @@ export function ProductOptionSelectorModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-lg p-6  w-[50%] max-h-[100vh] h-[70vh] overflow-y-auto">
         <h2 className="text-xl font-medium mb-4">Select product option values</h2>
         <p className="text-sm text-gray-600 mb-6">
           Enter the product option that the product needs to be matched against. Values must match exactly.
@@ -85,7 +85,7 @@ export function ProductOptionSelectorModal({
                     className="text-blue-600 hover:text-blue-800"
                     disabled={optionValues.length === 1}
                   >
-                    <Trash2 className={`w-5 h-5 ${optionValues.length === 1 ? "opacity-50" : ""}`} />
+                    <Trash2 className={`cursor-pointer w-5 h-5 ${optionValues.length === 1 ? "opacity-50" : ""}`} />
                   </button>
                 </div>
               ))}
@@ -96,19 +96,19 @@ export function ProductOptionSelectorModal({
         <button
           type="button"
           onClick={handleAddValue}
-          className="flex items-center justify-center w-full md:w-auto text-blue-600 hover:text-blue-800 text-sm border border-blue-200 rounded-md px-4 py-2 mb-6"
+          className="ml-[22rem] flex items-center justify-center w-full md:w-auto text-blue-600 hover:text-blue-800 text-sm cursor-pointer px-4 py-2 mb-6"
         >
           <span className="mr-1">+</span> Add another value
         </button>
 
-        <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-blue-600 hover:text-blue-800 rounded">
+        <div className="flex justify-end gap-2  mt-[12rem]">
+          <button type="button" onClick={onClose} className="px-4 py-2 cursor-pointer text-blue-600 hover:text-blue-800 rounded">
             Cancel
           </button>
           <button
             type="button"
             onClick={handleApply}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="px-4 py-2 cursor-pointer bg-blue-600 text-white rounded hover:bg-blue-700"
           >
             Apply
           </button>

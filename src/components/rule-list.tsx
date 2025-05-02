@@ -17,21 +17,26 @@ export function RuleList({ rules, onEditRule, onDeleteRule }: RuleListProps) {
 
   return (
     <div className="mb-4">
-      <div className="grid grid-cols-12 gap-4 py-2 border-b font-medium text-sm">
-        <div className="col-span-5">Condition</div>
-        <div className="col-span-5">Reward</div>
+      <div className="grid grid-cols-12 gap-4 py-2 border-b border-gray-300 font-medium text-sm">
+        <div className="col-span-5 font-bold">Condition</div>
+        <div className="col-span-5 font-bold ">Reward</div>
         <div className="col-span-2"></div>
       </div>
 
       {rules.map((rule) => (
-        <div key={rule.id} className="grid grid-cols-12 gap-4 py-4 border-b text-sm">
-          <div className="col-span-5">{rule.condition}</div>
-          <div className="col-span-5">{rule.reward}</div>
+        <div key={rule.id} className="grid grid-cols-12 gap-4 py-4 border-b border-gray-300 text-sm">
+          <div className="col-span-5">
+            {rule.condition
+              .toLowerCase()
+              .replace(/_/g, ' ')
+              .replace(/^\w/, (c) => c.toUpperCase())}
+          </div>
+          <div className="col-span-5">{rule.reward.toLowerCase().replace(/_/g,' ').replace(/^\w/,(c)=> c.toUpperCase())}</div>
           <div className="col-span-2 flex justify-end space-x-2">
-            <button type="button" onClick={() => onEditRule(rule.id)} className="text-blue-600 hover:text-blue-800">
+            <button type="button" onClick={() => onEditRule(rule.id)} className="cursor-pointer text-blue-600 hover:text-blue-800">
               Edit
             </button>
-            <button type="button" onClick={() => onDeleteRule(rule.id)} className="text-gray-500 hover:text-gray-700">
+            <button type="button" onClick={() => onDeleteRule(rule.id)} className="text-gray-500 hover:text-gray-700 cursor-pointer">
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                 <path
                   fillRule="evenodd"
