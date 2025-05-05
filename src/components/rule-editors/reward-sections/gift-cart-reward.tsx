@@ -66,11 +66,11 @@ export function GiftCartReward({ rule, onConfigChange }: GiftCartRewardProps) {
       {/* Product Selector - Replaced with the abstracted version */}
       <div className="relative flex-1 max-w-xs">
         <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-          <Search className="w-4 h-4 text-gray-500" />
+          <Search className="w-4 h-4 text-gray-400" />
         </div>
         <TagInput
           tags={getSelectedItems()}
-          placeholder="Click to select a product"
+          placeholder="Click to add a single product"
           onClick={() => setShowProductModal(true)}
         />
       </div>

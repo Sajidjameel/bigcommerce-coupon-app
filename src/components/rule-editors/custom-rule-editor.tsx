@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import type { Rule } from "@/types/rule-types"
 import { CONDITION_OPTIONS, REWARD_OPTIONS, FREQUENCY_OPTIONS } from "@/types/rule-types"
 
@@ -15,6 +15,9 @@ import { FreeShippingReward } from "./reward-sections/free-shipping-reward"
 import { DiscountProductsReward } from "./reward-sections/discount-products-reward"
 import { DiscountSubtotalReward } from "./reward-sections/discount-subtotal-reward"
 import { FixedPriceReward } from "./reward-sections/fixed-price-reward"
+
+// Import validation functions
+import { validateRule, validateShippingZones } from "@/components/rule-editors/rule-validation"
 
 interface CustomRuleEditorProps {
   rule: Rule
@@ -33,14 +36,27 @@ export function CustomRuleEditor({ rule, onRuleChange, onSave, onCancel, onSwitc
     REWARD_OPTIONS.find((option) => option.value === rule.reward) || REWARD_OPTIONS[0],
   )
 
+  const [validationErrors, setValidationErrors] = useState({
+    conditionSelection: "",
+    conditionProducts: "",
+    conditionExclusionProducts: "",
+    rewardSelection: "",
+    rewardProducts: "",
+    rewardExclusionProducts: "",
+  })
+
   const handleConditionChange = (value: string) => {
     const condition = CONDITION_OPTIONS.find((option) => option.value === value) || CONDITION_OPTIONS[0]
     setSelectedCondition(condition)
+    setValidationErrors((prev) => ({
+      ...prev,
+      conditionSelection: "",
+      conditionProducts: "",
+      conditionExclusionProducts: "",
+    }))
 
-    // Update the rule with the new condition
     const updatedRule = { ...rule, condition: value }
 
-    // Reset or set default values based on the condition
     if (value === "reaches_subtotal") {
       updatedRule.config = { ...updatedRule.config, minimumSpend: updatedRule.config.minimumSpend || 0 }
     } else if (value === "buys_products") {
@@ -51,7 +67,7 @@ export function CustomRuleEditor({ rule, onRuleChange, onSave, onCancel, onSwitc
         reachingValue: updatedRule.config.reachingValue || 0,
         inclusionRule: updatedRule.config.inclusionRule || {
           id: `inclusion-${Date.now()}`,
-          type: "individual",
+          type: "individual", // Default is "individual" as per the updated code
           value: "",
           selector: "",
           additionalConditions: [],
@@ -63,15 +79,18 @@ export function CustomRuleEditor({ rule, onRuleChange, onSave, onCancel, onSwitc
     onRuleChange(updatedRule)
   }
 
-  useEffect(() => { console.log("Selected Reward: ", selectedReward) }, [selectedReward])
   const handleRewardChange = (value: string) => {
     const reward = REWARD_OPTIONS.find((option) => option.value === value) || REWARD_OPTIONS[0]
     setSelectedReward(reward)
+    setValidationErrors((prev) => ({
+      ...prev,
+      rewardSelection: "",
+      rewardProducts: "",
+      rewardExclusionProducts: "",
+    }))
 
-    // Update the rule with the new reward
     const updatedRule = { ...rule, reward: value }
 
-    // Reset or set default values based on the reward
     if (value === "gift_cart") {
       updatedRule.config = {
         ...updatedRule.config,
@@ -95,10 +114,9 @@ export function CustomRuleEditor({ rule, onRuleChange, onSave, onCancel, onSwitc
         appliedTarget: updatedRule.config.appliedTarget || "least_expensive",
         includeOnSale: updatedRule.config.includeOnSale !== undefined ? updatedRule.config.includeOnSale : true,
         includeConditionProducts: updatedRule.config.includeConditionProducts || false,
-        // Separate inclusion/exclusion rules for the reward
         rewardInclusionRule: updatedRule.config.rewardInclusionRule || {
           id: `reward-inclusion-${Date.now()}`,
-          type: "individual",
+          type: "individual", // Default is "individual" as per the updated code
           value: "",
           selector: "",
           additionalConditions: [],
@@ -119,10 +137,9 @@ export function CustomRuleEditor({ rule, onRuleChange, onSave, onCancel, onSwitc
         applyTo: updatedRule.config.applyTo || "Least expensive",
         includeOnSale: updatedRule.config.includeOnSale !== undefined ? updatedRule.config.includeOnSale : true,
         includeConditionProducts: updatedRule.config.includeConditionProducts || false,
-        // Separate inclusion/exclusion rules for the reward
         rewardInclusionRule: updatedRule.config.rewardInclusionRule || {
           id: `reward-inclusion-${Date.now()}`,
-          type: "individual",
+          type: "individual", // Default is "individual" as per the updated code
           value: "",
           selector: "",
           additionalConditions: [],
@@ -142,10 +159,32 @@ export function CustomRuleEditor({ rule, onRuleChange, onSave, onCancel, onSwitc
         [field]: value,
       },
     })
+
+    // Clear relevant validation errors when config changes
+    if (field === "inclusionRule") {
+      setValidationErrors((prev) => ({ ...prev, conditionProducts: "" }))
+    } else if (field === "exclusionRules") {
+      setValidationErrors((prev) => ({ ...prev, conditionExclusionProducts: "" }))
+    } else if (field === "rewardInclusionRule" || field === "giftProduct") {
+      setValidationErrors((prev) => ({ ...prev, rewardProducts: "" }))
+    } else if (field === "rewardExclusionRules") {
+      setValidationErrors((prev) => ({ ...prev, rewardExclusionProducts: "" }))
+    } else if (field === "shippingZoneType" && value === "all") {
+      setValidationErrors((prev) => ({ ...prev, rewardProducts: "" }))
+    } else if (field === "selectedZones" && Array.isArray(value) && value.length > 0) {
+      setValidationErrors((prev) => ({ ...prev, rewardProducts: "" }))
+    }
   }
 
+  const handleSave = () => {
+    const newErrors = validateRule(rule)
+    setValidationErrors(newErrors)
 
-  // Render the appropriate condition component based on the selected condition
+    if (!Object.values(newErrors).some((error) => error !== "")) {
+      onSave()
+    }
+  }
+
   const renderConditionComponent = () => {
     switch (rule.condition) {
       case "buys_products":
@@ -159,12 +198,19 @@ export function CustomRuleEditor({ rule, onRuleChange, onSave, onCancel, onSwitc
     }
   }
 
-  // Render the appropriate reward component based on the selected reward
   const renderRewardComponent = () => {
     switch (rule.reward) {
       case "gift_cart":
         return <GiftCartReward rule={rule} onConfigChange={handleConfigChange} />
       case "free_shipping":
+        // Check shipping zones validation
+        const shippingError = validateShippingZones(rule)
+        if (shippingError) {
+          setValidationErrors((prev) => ({
+            ...prev,
+            rewardProducts: shippingError,
+          }))
+        }
         return <FreeShippingReward rule={rule} onConfigChange={handleConfigChange} />
       case "discount_products":
         return <DiscountProductsReward rule={rule} onConfigChange={handleConfigChange} />
@@ -198,17 +244,16 @@ export function CustomRuleEditor({ rule, onRuleChange, onSave, onCancel, onSwitc
             <div className="relative">
               <select
                 className="appearance-none border border-gray-300 rounded px-3 py-2 pr-8 text-sm bg-white w-64"
-                value={rule.condition}
-                defaultValue={selectedCondition.value}
+                value={rule.condition || ""}
                 onChange={(e) => handleConditionChange(e.target.value)}
               >
+                {/* <option value="">Select condition</option> */}
                 {CONDITION_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
                 ))}
               </select>
-
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
                 <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
                   <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
@@ -216,9 +261,20 @@ export function CustomRuleEditor({ rule, onRuleChange, onSave, onCancel, onSwitc
               </div>
             </div>
           </div>
+          {validationErrors.conditionSelection && (
+            <p className="text-red-500 text-sm -mt-3 ml-24">{validationErrors.conditionSelection}</p>
+          )}
 
           {/* Condition Details */}
-          <div className="pl-6 mb-4 space-y-4">{renderConditionComponent()}</div>
+          <div className="pl-6 mb-4 space-y-4">
+            {renderConditionComponent()}
+            {validationErrors.conditionProducts && (
+              <p className="text-red-500 text-sm mt-1">{validationErrors.conditionProducts}</p>
+            )}
+            {validationErrors.conditionExclusionProducts && (
+              <p className="text-red-500 text-sm mt-1">{validationErrors.conditionExclusionProducts}</p>
+            )}
+          </div>
 
           {/* Reward Section */}
           <div className="flex items-center gap-2 mb-4">
@@ -226,17 +282,16 @@ export function CustomRuleEditor({ rule, onRuleChange, onSave, onCancel, onSwitc
             <div className="relative">
               <select
                 className="appearance-none border border-gray-300 rounded px-3 py-2 pr-8 text-sm bg-white w-64"
-                value={rule.reward}
-                defaultValue={selectedReward.value}
+                value={rule.reward || ""}
                 onChange={(e) => handleRewardChange(e.target.value)}
               >
+                {/* <option value="">Select reward</option> */}
                 {REWARD_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
                 ))}
               </select>
-
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
                 <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
                   <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
@@ -244,7 +299,7 @@ export function CustomRuleEditor({ rule, onRuleChange, onSave, onCancel, onSwitc
               </div>
             </div>
 
-            {!(selectedReward.value == "free_shipping") &&
+            {!(selectedReward.value === "free_shipping") && (
               <>
                 <div className="relative ml-2">
                   <select
@@ -264,14 +319,24 @@ export function CustomRuleEditor({ rule, onRuleChange, onSave, onCancel, onSwitc
                     </svg>
                   </div>
                 </div>
-
                 <span className="text-sm">per cart</span>
               </>
-            }
+            )}
           </div>
+          {validationErrors.rewardSelection && (
+            <p className="text-red-500 text-sm -mt-3 ml-24">{validationErrors.rewardSelection}</p>
+          )}
 
           {/* Reward Details */}
-          <div className="pl-6 mb-4 space-y-4">{renderRewardComponent()}</div>
+          <div className="pl-6 mb-4 space-y-4">
+            {renderRewardComponent()}
+            {validationErrors.rewardProducts && (
+              <p className="text-red-500 text-sm mt-1">{validationErrors.rewardProducts}</p>
+            )}
+            {validationErrors.rewardExclusionProducts && (
+              <p className="text-red-500 text-sm mt-1">{validationErrors.rewardExclusionProducts}</p>
+            )}
+          </div>
 
           {/* Action Buttons */}
           <div className="border-t pt-4 flex justify-between">
@@ -284,7 +349,7 @@ export function CustomRuleEditor({ rule, onRuleChange, onSave, onCancel, onSwitc
             </button>
             <button
               type="button"
-              onClick={onSave}
+              onClick={handleSave}
               className="px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 cursor-pointer rounded"
             >
               Add rule to promotion
