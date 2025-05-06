@@ -12,12 +12,8 @@ export default function Rules() {
   const [showRuleEditor, setShowRuleEditor] = useState<boolean>(false)
   const [currentRule, setCurrentRule] = useState<Rule | null>(null)
   const [editingRuleId, setEditingRuleId] = useState<string | null>(null)
-  const [showRewardOptions, setShowRewardOptions] = useState<boolean>(false);
-  const [rewardType, setRewardType] = useState<'tiered' | 'stacked' | null>(null);
-
-  const handleAddRule = (): void => {
-    setShowRuleModal(true)
-  }
+  const [showRewardOptions, setShowRewardOptions] = useState<boolean>(false)
+  const [rewardType, setRewardType] = useState<"tiered" | "stacked" | null>(null)
 
   const handleRuleTypeSelect = (ruleType: string): void => {
     console.log("Creating rule with type:", ruleType)
@@ -59,7 +55,7 @@ export default function Rules() {
         reachingType: "quantity",
         reachingQuantity: 1,
         inclusionRule: {
-          id: `inclusion-${Date.now()}`,
+          id: `reward-inclusion-${Date.now()}`,
           type: "individual",
           value: "",
           selector: "",
@@ -188,7 +184,7 @@ export default function Rules() {
         id: `rule-${Date.now()}`,
       }
       setRules([...rules, copiedRule])
-      setShowRewardOptions(true);
+      setShowRewardOptions(true)
     }
   }
 
@@ -201,7 +197,6 @@ export default function Rules() {
     setCurrentRule(updatedRule)
   }
 
-  
   return (
     <div className="bg-white rounded-none shadow-sm p-6 overflow-hidden">
       <h3 className="text-xl font-medium mb-2">Rules</h3>
@@ -214,7 +209,7 @@ export default function Rules() {
       <div className="flex items-center justify-center gap-4">
         <button
           type="button"
-          onClick={handleAddRule}
+          onClick={() => setShowRuleModal(true)}
           className="flex items-center cursor-pointer text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm"
         >
           <svg
@@ -258,8 +253,8 @@ export default function Rules() {
               type="radio"
               name="rewardOption"
               id="tiered"
-              checked={rewardType === 'tiered'}
-              onChange={() => setRewardType('tiered')}
+              checked={rewardType === "tiered"}
+              onChange={() => setRewardType("tiered")}
               className="mt-1 size-4 cursor-pointer"
             />
             <label htmlFor="tiered">
@@ -275,8 +270,8 @@ export default function Rules() {
               type="radio"
               name="rewardOption"
               id="stacked"
-              checked={rewardType === 'stacked'}
-              onChange={() => setRewardType('stacked')}
+              checked={rewardType === "stacked"}
+              onChange={() => setRewardType("stacked")}
               className="mt-1 size-4 cursor-pointer"
             />
             <label htmlFor="stacked">
@@ -306,5 +301,5 @@ export default function Rules() {
         </>
       )}
     </div>
-  );
+  )
 }

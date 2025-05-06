@@ -44,6 +44,7 @@ export function CustomRuleEditor({ rule, onRuleChange, onSave, onCancel, onSwitc
     rewardProducts: "",
     rewardExclusionProducts: "",
   })
+  const [showRuleModal, setShowRuleModal] = useState<boolean>(false)
 
   const handleConditionChange = (value: string) => {
     const condition = CONDITION_OPTIONS.find((option) => option.value === value) || CONDITION_OPTIONS[0]

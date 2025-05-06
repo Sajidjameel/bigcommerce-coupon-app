@@ -4,64 +4,174 @@ import type React from "react"
 import { useCouponContext } from "../Context/CouponContext"
 import { PlusCircle, Trash2 } from "lucide-react"
 
-interface RuleProps {
-  rule: {
-    action: {
-      gift_item?: {
-        quantity: number
-        product_id: number
-      }
-      cart_items?: {
-        discount: {
-          percentage_amount?: string
-          fixed_amount?: string
-        }
-        strategy: string
-        add_free_item: boolean
-        as_total: boolean
-        include_items_considered_by_condition: boolean
-        exclude_items_on_sale: boolean
-        quantity: number
-      }
+// Define a local Rule interface that matches what's expected in this component
+interface Rule {
+  action: {
+    gift_item?: {
+      quantity: number
+      product_id: number
+      product_name?: string
     }
-    apply_once: boolean
-    stop: boolean
-    condition: {
-      cart: {
-        items: {
-          products?: number[]
-          not?: {
-            brands?: number[]
-          }
-        }
-        minimum_quantity: number
+    cart_items?: {
+      discount: {
+        percentage_amount?: string
+        fixed_amount?: string
+      }
+      strategy: string
+      add_free_item: boolean
+      as_total: boolean
+      include_items_considered_by_condition: boolean
+      exclude_items_on_sale: boolean
+      quantity: number
+    }
+    shipping?: {
+      free_shipping: boolean
+      zone_ids?: number[]
+      zone_names?: string[]
+    }
+    cart?: {
+      discount: {
+        percentage_amount?: string
+        fixed_amount?: string
       }
     }
   }
+  apply_once: boolean
+  stop: boolean
+  condition:
+    | {
+        cart: {
+          items: {
+            products?: Array<{ id: number; name: string }> | number[]
+            categories?: Array<{ id: number; name: string }> | number[]
+            brands?: Array<{ id: number; name: string }> | number[]
+            not?: {
+              brands?: Array<{ id: number; name: string }> | number[]
+              categories?: Array<{ id: number; name: string }> | number[]
+              products?: Array<{ id: number; name: string }> | number[]
+            }
+            and?: Array<{
+              products?: Array<{ id: number; name: string }> | number[]
+              categories?: Array<{ id: number; name: string }> | number[]
+              brands?: Array<{ id: number; name: string }> | number[]
+              not?: {
+                products?: Array<{ id: number; name: string }> | number[]
+                categories?: Array<{ id: number; name: string }> | number[]
+                brands?: Array<{ id: number; name: string }> | number[]
+              }
+            }>
+          }
+          minimum_quantity: number
+          subtotal?: {
+            min_amount: number
+          }
+        }
+      }
+    | string
+  config?: any
+  reward?: string
+  id?: string
+  type?: string
+}
+
+interface RuleProps {
+  rule: Rule
   index: number
   onRemove: () => void
 }
 
-const Rule: React.FC<RuleProps> = ({ rule, index, onRemove }) => {
+const RuleItem: React.FC<RuleProps> = ({ rule, index, onRemove }) => {
   // Helper function to display rule details in a readable format
   const getRuleDescription = () => {
+    // Handle the case where rule might not have condition or action properties
+    if (!rule.condition || !rule.action) {
+      return "Rule configuration incomplete"
+    }
+
     const { condition, action } = rule
 
     let conditionText = ""
-    if (condition.cart.items.products) {
-      conditionText = `When cart has ${condition.cart.minimum_quantity} of products [${condition.cart.items.products.join(", ")}]`
-    } else if (condition.cart.items.not?.brands) {
-      conditionText = `When cart has ${condition.cart.minimum_quantity} items not from brands [${condition.cart.items.not.brands.join(", ")}]`
+    if (typeof condition === "object") {
+      if (condition.cart?.items?.products) {
+        const products = Array.isArray(condition.cart.items.products) ? condition.cart.items.products : []
+
+        const productNames = products.map((p) => (typeof p === "object" ? p.name : `Product ${p}`)).join(", ")
+        conditionText = `When cart has ${condition.cart.minimum_quantity} of products [${productNames}]`
+      } else if (condition.cart?.items?.not?.brands) {
+        const brands = Array.isArray(condition.cart.items.not.brands) ? condition.cart.items.not.brands : []
+
+        const brandNames = brands.map((b) => (typeof b === "object" ? b.name : `Brand ${b}`)).join(", ")
+        conditionText = `When cart has ${condition.cart.minimum_quantity} items not from brands [${brandNames}]`
+      } else if (condition.cart?.items?.not?.categories) {
+        const categories = Array.isArray(condition.cart.items.not.categories) ? condition.cart.items.not.categories : []
+
+        const categoryNames = categories.map((c) => (typeof c === "object" ? c.name : `Category ${c}`)).join(", ")
+        conditionText = `When cart has ${condition.cart.minimum_quantity} items not from categories [${categoryNames}]`
+      } else if (condition.cart?.items?.and) {
+        conditionText = `When cart has ${condition.cart.minimum_quantity} items with complex conditions`
+      } else if (condition.cart?.subtotal) {
+        conditionText = `When cart subtotal reaches ${condition.cart.subtotal.min_amount}`
+      } else if (condition.cart) {
+        conditionText = `When cart has ${condition.cart.minimum_quantity} items`
+      }
+    } else if (typeof condition === "string") {
+      // Handle string conditions
+      if (condition === "buys_products") {
+        conditionText = "When customer buys products"
+      } else if (condition === "reaches_subtotal") {
+        conditionText = "When customer reaches subtotal"
+      } else if (condition === "no_conditions") {
+        conditionText = "No conditions"
+      } else {
+        conditionText = condition
+      }
+    } else {
+      conditionText = "When condition is met"
     }
 
     let actionText = ""
     if (action.gift_item) {
-      actionText = `Add ${action.gift_item.quantity} of product #${action.gift_item.product_id} as gift`
+      const productName = action.gift_item.product_name || `Product #${action.gift_item.product_id}`
+      actionText = `Add ${action.gift_item.quantity} of ${productName} as gift`
+    } else if (action.shipping?.free_shipping) {
+      actionText = "Free shipping"
+      if (action.shipping.zone_ids && action.shipping.zone_ids.length > 0) {
+        const zoneText =
+          action.shipping.zone_names && action.shipping.zone_names.length > 0
+            ? action.shipping.zone_names.join(", ")
+            : action.shipping.zone_ids.join(", ")
+        actionText += ` for zones [${zoneText}]`
+      } else {
+        actionText += " for all zones"
+      }
     } else if (action.cart_items?.discount) {
       const discountType = action.cart_items.discount.percentage_amount
         ? `${action.cart_items.discount.percentage_amount}%`
         : `$${action.cart_items.discount.fixed_amount}`
       actionText = `Apply ${discountType} discount using ${action.cart_items.strategy} strategy`
+
+      if (action.cart_items.add_free_item) {
+        actionText += " with free item"
+      }
+
+      if (action.cart_items.as_total) {
+        actionText += " as total"
+      }
+
+      if (action.cart_items.include_items_considered_by_condition) {
+        actionText += " (including condition items)"
+      }
+
+      if (action.cart_items.exclude_items_on_sale) {
+        actionText += " (excluding sale items)"
+      }
+    } else if (action.cart?.discount) {
+      const discountType = action.cart.discount.percentage_amount
+        ? `${action.cart.discount.percentage_amount}%`
+        : `$${action.cart.discount.fixed_amount}`
+      actionText = `Apply ${discountType} discount to cart total`
+    } else {
+      actionText = "Apply reward"
     }
 
     return `${conditionText} → ${actionText}`
@@ -88,25 +198,54 @@ const RuleList: React.FC = () => {
   const { formData, removeRule, addRule } = useCouponContext()
 
   const handleAddRule = () => {
-    // Add a default rule template
-    addRule({
+    // Create a properly typed rule object
+    const newRule: Rule = {
       action: {
-        gift_item: {
+        cart_items: {
+          discount: {
+            percentage_amount: "10",
+          },
+          strategy: "LEAST_EXPENSIVE",
+          add_free_item: false,
+          as_total: false,
+          include_items_considered_by_condition: true,
+          exclude_items_on_sale: false,
           quantity: 1,
-          product_id: 0,
         },
       },
       apply_once: true,
-      stop: false,
+      stop: true,
       condition: {
         cart: {
           items: {
-            products: [0],
+            products: [
+              { id: 695, name: "Sample Product 1" },
+              { id: 694, name: "Sample Product 2" },
+            ],
           },
           minimum_quantity: 1,
         },
       },
-    })
+      config: {
+        reachingType: "quantity",
+        reachingQuantity: 1,
+        discountType: "percentage",
+        discountValue: 10,
+        frequency: "once",
+        stop: true,
+        inclusionRule: {
+          id: `inclusion-${Date.now()}`,
+          type: "individual",
+          value: "695,694",
+          selector: "Selected Products",
+        },
+      },
+      reward: "discount_products",
+      id: `rule-${Date.now()}`,
+      type: "custom",
+    }
+
+    addRule(newRule)
   }
 
   return (
@@ -126,7 +265,7 @@ const RuleList: React.FC = () => {
       ) : (
         <div>
           {formData.rules.map((rule, index) => (
-            <Rule key={index} rule={rule} index={index} onRemove={() => removeRule(index)} />
+            <RuleItem key={index} rule={rule} index={index} onRemove={() => removeRule(index)} />
           ))}
         </div>
       )}
