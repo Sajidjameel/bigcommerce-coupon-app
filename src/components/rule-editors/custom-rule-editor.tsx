@@ -18,6 +18,7 @@ import { FixedPriceReward } from "./reward-sections/fixed-price-reward"
 
 // Import validation functions
 import { validateRule, validateShippingZones } from "@/components/rule-editors/rule-validation"
+import { useCouponContext } from "../Context/CouponContext"
 
 interface CustomRuleEditorProps {
   rule: Rule
@@ -28,6 +29,7 @@ interface CustomRuleEditorProps {
 }
 
 export function CustomRuleEditor({ rule, onRuleChange, onSave, onCancel, onSwitchRule }: CustomRuleEditorProps) {
+  const {formData, setFormData, addRule} = useCouponContext() 
   const [selectedCondition, setSelectedCondition] = useState(
     CONDITION_OPTIONS.find((option) => option.value === rule.condition) || CONDITION_OPTIONS[0],
   )
@@ -178,6 +180,7 @@ export function CustomRuleEditor({ rule, onRuleChange, onSave, onCancel, onSwitc
   }
 
   const handleSave = () => {
+    addRule(rule)
     const newErrors = validateRule(rule)
     setValidationErrors(newErrors)
 
@@ -245,7 +248,7 @@ export function CustomRuleEditor({ rule, onRuleChange, onSave, onCancel, onSwitc
             <div className="relative">
               <select
                 className="appearance-none border border-gray-300 rounded px-3 py-2 pr-8 text-sm bg-white w-64"
-                value={rule.condition || ""}
+                value={rule.condition}
                 onChange={(e) => handleConditionChange(e.target.value)}
               >
                 {/* <option value="">Select condition</option> */}

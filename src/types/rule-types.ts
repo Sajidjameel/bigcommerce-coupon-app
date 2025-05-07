@@ -1,10 +1,9 @@
 export type Rule = {
   id: string
   type: string
-  condition: string
+  condition: string | object
   reward: string
   config: {
-    
     price?: number
     quantity?: number
     applyTo?: string
@@ -14,14 +13,12 @@ export type Rule = {
     selectedProducts?: string[]
     minimumSpend?: number
     giftQuantity?: number
-    giftProduct?: string
+    giftProduct?: string | { id: number; name: string }
     shippingZoneType?: "all" | "selected"
-  
     selectedZones?: Zone[] // Updated to Zone[] instead of string[]
     frequency?: string
     // Fields for product conditions
     reachingType?: "quantity" | "total_value"
-
     reachingQuantity?: number
     reachingValue?: number
     inclusionRule?: InclusionRule
@@ -36,56 +33,72 @@ export type Rule = {
     // Separate inclusion/exclusion rules for the reward
     rewardInclusionRule?: InclusionRule
     rewardExclusionRules?: ExclusionRule[]
+    // Additional properties
+    stop?: boolean
   }
+  action?: {
+    gift_item?: {
+      quantity: number
+      product_id: number
+    }
+    cart_items?: {
+      discount: {
+        percentage_amount?: string
+        fixed_amount?: string
+      }
+      strategy: string
+      add_free_item: boolean
+      as_total: boolean
+      include_items_considered_by_condition: boolean
+      exclude_items_on_sale: boolean
+      quantity: number
+    }
+  }
+  apply_once?: boolean
+  stop?: boolean
 }
+
 export interface Zone {
   zoneid: number
   name: string
   enabled: boolean
 }
 
-
 /**
-* Product interface representing a BigCommerce product
-*/
+ * Product interface representing a BigCommerce product
+ */
 export interface Product {
-id: number
-name: string
-sku: string
-price: number
-primary_image: {
-  url_standard: string
-} | null
+  id: number
+  name: string
+  sku: string
+  price: number
+  primary_image: {
+    url_standard: string
+  } | null
 }
 
 /**
-* Pagination interface for API responses
-*/
+ * Pagination interface for API responses
+ */
 export interface Pagination {
-total_pages: number
-current_page: number
-total: number
-count: number
+  total_pages: number
+  current_page: number
+  total: number
+  count: number
 }
-
-
-
 
 export interface InclusionRule {
-id: string
-type: string
-value: string
-selector?: string
-additionalConditions?: {
   id: string
   type: string
   value: string
   selector?: string
-}[]
+  additionalConditions?: {
+    id: string
+    type: string
+    value: string
+    selector?: string
+  }[]
 }
-
-
-
 
 export type AdditionalCondition = {
   id: string
@@ -119,15 +132,15 @@ export type RewardOption = {
   disabled?: boolean
 }
 
-export const CONDITION_OPTIONS: ConditionOption[] = [ 
- { value: "please_select", label: "Please select a value", disabled: true },
+export const CONDITION_OPTIONS: ConditionOption[] = [
+  { value: "please_select_condition", label: "Please select a value", disabled: true },
   { value: "buys_products", label: "Buys Products" },
   { value: "reaches_subtotal", label: "Reaches an order sub-total" },
   { value: "no_conditions", label: "No conditions" },
 ]
 
 export const REWARD_OPTIONS: RewardOption[] = [
-  { value: "please_select", label: "Please select a value", disabled: true },
+  { value: "please_select_reward", label: "Please select a value", disabled: true },
   { value: "gift_cart", label: "A gift in their cart" },
   { value: "free_shipping", label: "Free Shipping" },
   { value: "discount_products", label: "Discount on products" },
@@ -151,7 +164,7 @@ export const REACHING_TYPE_OPTIONS = [
 ]
 
 export const PRODUCT_INCLUSION_OPTIONS = [
-  { value: "please_select", label: "Please select a value", disabled: true },
+  { value: "please_select_inclusion", label: "Please select a value", disabled: true },
   { value: "individual", label: "Individual Products" },
   { value: "all", label: "All products" },
   { value: "category", label: "In category" },
@@ -161,7 +174,7 @@ export const PRODUCT_INCLUSION_OPTIONS = [
 ]
 
 export const ADDITIONAL_CONDITION_OPTIONS = [
-  { value: "please_select", label: "Please select a value", disabled: true },
+  { value: "please_select_additional", label: "Please select a value", disabled: true },
   { value: "brand", label: "In brand" },
   { value: "custom_field", label: "With custom field" },
   { value: "product_option", label: "With product option" },
@@ -187,49 +200,47 @@ export const APPLIED_TARGET_OPTIONS = [
   { value: "most_expensive", label: "Most expensive" },
 ]
 
-
-
 // types/currency.ts
 export interface Currency {
-id: number;
-defaultName: string;
-name: string;
-code: string;
-symbol: string;
-symbolLocation: string;
-decimalSeparator: string;
-decimalPlaces: number;
-thousandsSeparator: string;
-exchangeRate: number;
-isExchangeRateAutoUpdated: boolean;
-isTransactional: boolean;
-isEnabled: boolean;
-isDefault: boolean;
-useDefaultName: boolean;
-countries: any[]; // You can further type this if needed
+  id: number
+  defaultName: string
+  name: string
+  code: string
+  symbol: string
+  symbolLocation: string
+  decimalSeparator: string
+  decimalPlaces: number
+  thousandsSeparator: string
+  exchangeRate: number
+  isExchangeRateAutoUpdated: boolean
+  isTransactional: boolean
+  isEnabled: boolean
+  isDefault: boolean
+  useDefaultName: boolean
+  countries: any[] // You can further type this if needed
 }
 
 export interface CurrenciesResponse {
-data: Currency[];
-meta: Record<string, unknown>;
+  data: Currency[]
+  meta: Record<string, unknown>
 }
 
 export type RuleTypeId = "customerGroup" | "customerSegment" | "shippingDestination"
 
 export type TargetingRule = {
-id: string
-type: RuleTypeId | null
-condition: string
-value: string
-selectedItems?: any[]
+  id: string
+  type: RuleTypeId | null
+  condition: string
+  value: string
+  selectedItems?: any[]
 }
 
 export type AvailableRuleType = {
-id: RuleTypeId
-label: string
+  id: RuleTypeId
+  label: string
 }
 
 export type CustomerGroup = {
-id: number
-name: string
+  id: number
+  name: string
 }

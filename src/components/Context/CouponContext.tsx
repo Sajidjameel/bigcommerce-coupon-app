@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { createContext, useContext, useState, useEffect } from "react"
-import type { Zone } from "@/types/rule-types"
+import type { Rule, Zone } from "@/types/rule-types"
 
 // Types for shipping destinations
 interface Country {
@@ -13,8 +13,9 @@ interface Country {
 // Types for targeting rules
 interface TargetingRule {
   id: string
-  type: string
+  type: string | null
   condition: string
+  value: string
   selectedItems?: any[]
 }
 
@@ -61,7 +62,7 @@ interface Action {
   }
 }
 
-interface Condition {
+interface ComplexCondition {
   cart: {
     items: {
       products?: Array<{ id: number; name: string }> | number[]
@@ -71,6 +72,11 @@ interface Condition {
         brands?: Array<{ id: number; name: string }> | number[]
         categories?: Array<{ id: number; name: string }> | number[]
         products?: Array<{ id: number; name: string }> | number[]
+        and?: Array<{
+          brands?: Array<{ id: number; name: string }> | number[]
+          categories?: Array<{ id: number; name: string }> | number[]
+          products?: Array<{ id: number; name: string }> | number[]
+        }>
       }
       and?: Array<{
         products?: Array<{ id: number; name: string }> | number[]
@@ -80,6 +86,11 @@ interface Condition {
           products?: Array<{ id: number; name: string }> | number[]
           categories?: Array<{ id: number; name: string }> | number[]
           brands?: Array<{ id: number; name: string }> | number[]
+          and?: Array<{
+            brands?: Array<{ id: number; name: string }> | number[]
+            categories?: Array<{ id: number; name: string }> | number[]
+            products?: Array<{ id: number; name: string }> | number[]
+          }>
         }
       }>
     }
@@ -90,15 +101,12 @@ interface Condition {
   }
 }
 
-interface Rule {
-  action: Action
-  apply_once: boolean
-  stop: boolean
-  condition: Condition | string
-  config?: any
-  reward?: string
-  id?: string
-  type?: string
+// Extend the Rule type to include our custom properties
+interface ExtendedRule extends Rule {
+  action?: Action
+  apply_once?: boolean
+  stop?: boolean
+  condition: string | ComplexCondition
 }
 
 interface Channel {
@@ -153,7 +161,7 @@ interface CouponFormData {
   appliesTo: string
 
   // Rules
-  rules: Rule[]
+  rules: ExtendedRule[]
   rewardType: "tiered" | "stacked" | null
 
   // Targeting
@@ -218,7 +226,7 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
   const [couponCodes, setCouponCodes] = useState<string[]>([])
   const [channels, setChannels] = useState<Channel[]>([])
   const [showChannelModal, setShowChannelModal] = useState(false)
-  const [selectedChannelIds, setSelectedChannelIds] = useState<string[]>([])
+  const [selectedChannelIds, setSelectedChannelIds] = useState<string[]>(["1"]) // Default to channel 1
 
   const [formData, setFormData] = useState<CouponFormData>({
     // Basic info
@@ -266,7 +274,7 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Rules
     rules: [],
-    rewardType: null,
+    rewardType: "stacked", // Default to stacked rewards
 
     // Targeting
     targetingRules: [],
@@ -274,7 +282,7 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Channels
     channels: [],
-    selectedChannelIds: [],
+    selectedChannelIds: ["1"], // Default to channel 1
   })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -287,18 +295,17 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
     setFormData((prev) => ({ ...prev, [name]: checked }))
   }
 
-const addRule = (rule:Rule) => {
-  console.log("Adding rule:", rule); // Debug log
-  setFormData((prev) => ({
-    ...prev,
-    rules: [...prev.rules, rule],
-  }));
-};
+  const addRule = (rule: Rule) => {
+    console.log("Adding rule:", rule) // Debug log
+    setFormData((prev) => ({
+      ...prev,
+      rules: [...prev.rules, rule as ExtendedRule],
+    }))
+  }
 
-
-  useEffect(()=>{
-  console.log("Rules in Form",formData.rules)
-  },[formData.rules])
+  useEffect(() => {
+    console.log("Rules in Form", formData.rules)
+  }, [formData.rules])
 
   const removeRule = (index: number) => {
     setFormData((prev) => ({
@@ -310,7 +317,7 @@ const addRule = (rule:Rule) => {
   const updateRule = (index: number, rule: Rule) => {
     setFormData((prev) => {
       const newRules = [...prev.rules]
-      newRules[index] = rule
+      newRules[index] = rule as ExtendedRule
       return { ...prev, rules: newRules }
     })
   }
@@ -319,8 +326,9 @@ const addRule = (rule:Rule) => {
   const addTargetingRule = () => {
     const newRule: TargetingRule = {
       id: `rule-${Date.now()}`,
-      type: "",
+      type: null,
       condition: "is",
+      value: "",
     }
 
     setFormData((prev) => ({
@@ -374,107 +382,6 @@ const addRule = (rule:Rule) => {
     }))
   }
 
-  // Initialize with default rules if none exist
-  // useEffect(() => {
-  //   if (formData.rules.length === 0) {
-  //     // Add default rules
-  //     const defaultRules: Rule[] = [
-  //       {
-  //         action: {
-  //           cart_items: {
-  //             discount: {
-  //               percentage_amount: "10",
-  //             },
-  //             strategy: "LEAST_EXPENSIVE",
-  //             add_free_item: false,
-  //             as_total: false,
-  //             include_items_considered_by_condition: true,
-  //             exclude_items_on_sale: false,
-  //             quantity: 1,
-  //           },
-  //         },
-  //         apply_once: true,
-  //         stop: true,
-  //         condition: {
-  //           cart: {
-  //             items: {
-  //               products: [
-  //                 { id: 695, name: "Sample Product 1" },
-  //                 { id: 694, name: "Sample Product 2" },
-  //               ],
-  //             },
-  //             minimum_quantity: 1,
-  //           },
-  //         },
-  //       },
-  //       {
-  //         action: {
-  //           gift_item: {
-  //             quantity: 1,
-  //             product_id: 697,
-  //             product_name: "Gift Product",
-  //           },
-  //         },
-  //         apply_once: true,
-  //         stop: true,
-  //         condition: {
-  //           cart: {
-  //             items: {
-  //               products: [{ id: 695, name: "Sample Product 1" }],
-  //             },
-  //             minimum_quantity: 1,
-  //           },
-  //         },
-  //       },
-  //       {
-  //         action: {
-  //           gift_item: {
-  //             quantity: 1,
-  //             product_id: 697,
-  //             product_name: "Gift Product",
-  //           },
-  //         },
-  //         apply_once: true,
-  //         stop: true,
-  //         condition: {
-  //           cart: {
-  //             items: {
-  //               not: {
-  //                 brands: [{ id: 38, name: "Sample Brand" }],
-  //               },
-  //             },
-  //             minimum_quantity: 6,
-  //           },
-  //         },
-  //       },
-  //       {
-  //         action: {
-  //           gift_item: {
-  //             quantity: 1,
-  //             product_id: 697,
-  //             product_name: "Gift Product",
-  //           },
-  //         },
-  //         apply_once: true,
-  //         stop: true,
-  //         condition: {
-  //           cart: {
-  //             items: {
-  //               products: [{ id: 697, name: "Gift Product" }],
-  //             },
-  //             minimum_quantity: 1,
-  //           },
-  //         },
-  //       },
-  //     ]
-
-  //     setFormData((prev) => ({
-  //       ...prev,
-  //       rules: defaultRules,
-  //     }))
-  //   }
-  // }, [])
-
   // Helper function to parse product, category, or brand IDs from a string
   const parseIds = (value: string): Array<{ id: number; name: string }> => {
     if (!value) return []
@@ -483,7 +390,7 @@ const addRule = (rule:Rule) => {
       // Try to parse as JSON first (for objects with id property)
       try {
         const parsed = JSON.parse(value)
-        if (parsed.id) {
+        if (parsed && parsed.id) {
           return [{ id: Number(parsed.id), name: parsed.name || `Item ${parsed.id}` }]
         }
       } catch (e) {
@@ -497,7 +404,7 @@ const addRule = (rule:Rule) => {
           // Try to extract id from JSON string if possible
           try {
             const parsed = JSON.parse(item.trim())
-            return parsed.id
+            return parsed && parsed.id
               ? { id: Number(parsed.id), name: parsed.name || `Item ${parsed.id}` }
               : { id: Number(item.trim()), name: `Item ${item.trim()}` }
           } catch (e) {
@@ -541,6 +448,11 @@ const addRule = (rule:Rule) => {
     return Object.keys(result).length > 0 ? result : null
   }
 
+
+
+
+
+
   // Helper function to process exclusion rules
   const processExclusionRules = (exclusionRules: any[]) => {
     if (!exclusionRules || !Array.isArray(exclusionRules) || exclusionRules.length === 0) {
@@ -582,6 +494,68 @@ const addRule = (rule:Rule) => {
     return Object.keys(notConditions).length > 0 ? notConditions : null
   }
 
+  // Helper function to create complex nested conditions
+  const createComplexCondition = (rule: any) => {
+    // Create a condition structure that matches the payload format
+    const condition: any = {
+      cart: {
+        minimum_quantity: rule.config?.reachingQuantity || 1,
+        items: {},
+      },
+    };
+  
+    // Process inclusion and exclusion rules
+    const inclusionItems = rule.config?.inclusionRule ? processInclusionRule(rule.config.inclusionRule) : null;
+    const exclusionItems = rule.config?.exclusionRules ? processExclusionRules(rule.config.exclusionRules) : null;
+  
+    // If we have both inclusion and exclusion rules, use an "and" condition
+    if (inclusionItems && exclusionItems) {
+      condition.cart.items.and = [];
+  
+      // Add inclusion items
+      if (inclusionItems.all) {
+        // For "all products", we don't need to specify any items
+      } else {
+        condition.cart.items.and.push(inclusionItems);
+      }
+  
+      // Check if exclusion has multiple types (brand AND category)
+      if (exclusionItems.brands && exclusionItems.categories) {
+        // Create a nested "not" with "and" for multiple exclusion types
+        condition.cart.items.and.push({
+          not: {
+            and: [
+              { brands: exclusionItems.brands },
+              { categories: exclusionItems.categories }
+            ],
+          },
+        });
+      } else {
+        // Simple exclusion
+        condition.cart.items.and.push({ not: exclusionItems });
+      }
+    } else if (inclusionItems) {
+      // Only inclusion rules
+      if (inclusionItems.all) {
+        // For "all products", we don't need to specify any items
+      } else {
+        Object.assign(condition.cart.items, inclusionItems);
+      }
+    } else if (exclusionItems) {
+      // Only exclusion rules
+      condition.cart.items.not = exclusionItems;
+    }
+  
+    return condition;
+  };
+
+
+
+
+
+
+
+
   // Update the generateCoupon function to properly convert UI selections to the BigCommerce API format
   const generateCoupon = async () => {
     setLoading(true)
@@ -607,254 +581,98 @@ const addRule = (rule:Rule) => {
       }
 
       // Convert UI rules to BigCommerce API format
-      const convertRulesToApiFormat = (rules: Rule[]) => {
+      const convertRulesToApiFormat = (rules: ExtendedRule[]) => {
         return rules.map((rule) => {
           // Start with a basic rule structure
           const apiRule: any = {
-            apply_once: rule.config?.frequency === "once" || true,
-            stop: rule.config?.stop || true,
-            condition: {
-              cart: {
-                minimum_quantity: 1,
-                items: {},
-              },
-            },
+            apply_once: rule.apply_once !== undefined ? rule.apply_once : true,
+            stop: rule.stop !== undefined ? rule.stop : false,
+            condition: {},
             action: {}, // Make sure action is an object, not an array
           }
 
-          // Process condition based on rule type
-          if (typeof rule.condition === "string") {
-            if (rule.condition === "buys_products") {
-              // Set minimum quantity from config if available
-              apiRule.condition.cart.minimum_quantity = rule.config?.reachingQuantity || 1
-
-              // Process inclusion rules
-              const inclusionItems = rule.config?.inclusionRule ? processInclusionRule(rule.config.inclusionRule) : null
-              const exclusionItems = rule.config?.exclusionRules
-                ? processExclusionRules(rule.config.exclusionRules)
-                : null
-
-              // If we have both inclusion and exclusion rules, use an "and" condition
-              if (inclusionItems && exclusionItems) {
-                apiRule.condition.cart.items.and = []
-
-                // Add inclusion items
-                if (inclusionItems.all) {
-                  // For "all products", we don't need to specify any items
-                } else {
-                  apiRule.condition.cart.items.and.push(inclusionItems)
-                }
-
-                // Add exclusion items as a "not" condition
-                apiRule.condition.cart.items.and.push({ not: exclusionItems })
-              } else if (inclusionItems) {
-                // Only inclusion rules
-                if (inclusionItems.all) {
-                  // For "all products", we don't need to specify any items
-                } else {
-                  Object.assign(apiRule.condition.cart.items, inclusionItems)
-                }
-              } else if (exclusionItems) {
-                // Only exclusion rules
-                apiRule.condition.cart.items.not = exclusionItems
-              }
-
-              // Handle additional conditions if they exist
-              if (
-                rule.config?.inclusionRule?.additionalConditions &&
-                Array.isArray(rule.config.inclusionRule.additionalConditions) &&
-                rule.config.inclusionRule.additionalConditions.length > 0
-              ) {
-                // If we already have an "and" condition, add to it
-                if (!apiRule.condition.cart.items.and) {
-                  apiRule.condition.cart.items.and = []
-
-                  // If we have existing items, add them to the "and" array first
-                  if (Object.keys(apiRule.condition.cart.items).length > 0 && !apiRule.condition.cart.items.not) {
-                    const existingItems = { ...apiRule.condition.cart.items }
-                    delete existingItems.and
-                    if (Object.keys(existingItems).length > 0) {
-                      apiRule.condition.cart.items.and.push(existingItems)
-                    }
-
-                    // Clear the original items object
-                    Object.keys(apiRule.condition.cart.items).forEach((key) => {
-                      if (key !== "and") {
-                        delete apiRule.condition.cart.items[key]
-                      }
-                    })
-                  }
-                }
-
-                // Process each additional condition
-                for (const condition of rule.config.inclusionRule.additionalConditions) {
-                  const additionalItems = processInclusionRule(condition)
-                  if (additionalItems && !additionalItems.all) {
-                    apiRule.condition.cart.items.and.push(additionalItems)
-                  }
-                }
-              }
-            } else if (rule.condition === "reaches_subtotal") {
-              // Set minimum subtotal
-              apiRule.condition.cart.subtotal = {
-                min_amount: rule.config?.minimumSpend || 0,
-              }
-              delete apiRule.condition.cart.items
-            } else if (rule.condition === "no_conditions") {
-              // No specific conditions needed
-              delete apiRule.condition.cart.items
-            }
-          } else if (typeof rule.condition === "object") {
-            // If condition is already in the correct format, use it directly
+          // Use the condition directly if it's already in the correct format
+          if (typeof rule.condition === "object") {
             apiRule.condition = rule.condition
+          } else {
+            // Create a condition based on the rule type
+            apiRule.condition = createComplexCondition(rule)
           }
 
-          // Process reward based on rule type
-          if (rule.reward === "gift_cart" && rule.config?.giftProduct) {
-            // Gift item reward
-            let productId: number
-            let productName = ""
+          // Use the action directly if it's already in the correct format
+          if (rule.action) {
+            apiRule.action = rule.action
+          } else {
+            // Create an action based on the rule type
+            if (rule.reward === "gift_cart" && rule.config?.giftProduct) {
+              // Gift item reward
+              let productId: number
+              let productName = ""
 
-            if (typeof rule.config.giftProduct === "object" && rule.config.giftProduct.id) {
-              productId = rule.config.giftProduct.id
-              productName = rule.config.giftProduct.name || `Product ${productId}`
-            } else if (typeof rule.config.giftProduct === "string") {
-              try {
-                // Try to parse as JSON first
-                const parsed = JSON.parse(rule.config.giftProduct)
-                productId = parsed.id || Number(rule.config.giftProduct)
-                productName = parsed.name || `Product ${productId}`
-              } catch (e) {
-                // Not JSON, just convert to number
-                productId = Number(rule.config.giftProduct)
-                productName = `Product ${productId}`
-              }
-            } else {
-              productId = 0 // Default fallback
-            }
-
-            if (productId > 0) {
-              apiRule.action.gift_item = {
-                quantity: rule.config.giftQuantity || 1,
-                product_id: productId,
-                product_name: productName,
-              }
-            }
-          } else if (rule.reward === "free_shipping") {
-            // Free shipping reward
-            apiRule.action.shipping = {
-              free_shipping: true,
-            }
-
-            // Add shipping zones if specified
-            if (
-              rule.config?.shippingZoneType === "selected" &&
-              rule.config.selectedZones &&
-              Array.isArray(rule.config.selectedZones) &&
-              rule.config.selectedZones.length > 0
-            ) {
-              apiRule.action.shipping.zone_ids = rule.config.selectedZones
-                .filter((zone: Zone) => zone && zone.zoneid)
-                .map((zone: Zone) => zone.zoneid)
-
-              // Also store zone names for display purposes
-              apiRule.action.shipping.zone_names = rule.config.selectedZones
-                .filter((zone: Zone) => zone && zone.name)
-                .map((zone: Zone) => zone.name)
-            }
-          } else if (rule.reward === "discount_products") {
-            // Product discount reward
-            apiRule.action.cart_items = {
-              discount: {},
-              strategy: rule.config?.appliedTarget?.toUpperCase() || "LEAST_EXPENSIVE",
-              add_free_item: false,
-              as_total: rule.config?.discountFrom === "cart_total" || false,
-              include_items_considered_by_condition: rule.config?.includeConditionProducts || false,
-              exclude_items_on_sale: !(rule.config?.includeOnSale || false),
-              quantity: rule.config?.appliedQuantity || 1,
-            }
-
-            // Set discount type and amount
-            if (rule.config?.discountType === "percentage") {
-              apiRule.action.cart_items.discount.percentage_amount = String(rule.config.discountValue || 10)
-            } else {
-              apiRule.action.cart_items.discount.fixed_amount = String(rule.config.discountValue || 10)
-            }
-
-            // Process reward inclusion rules
-            if (rule.config?.rewardInclusionRule) {
-              const inclusionItems = processInclusionRule(rule.config.rewardInclusionRule)
-
-              if (inclusionItems && !inclusionItems.all) {
-                apiRule.action.cart_items.items = inclusionItems
-              }
-            }
-
-            // Process reward exclusion rules
-            if (rule.config?.rewardExclusionRules) {
-              const exclusionItems = processExclusionRules(rule.config.rewardExclusionRules)
-
-              if (exclusionItems) {
-                if (!apiRule.action.cart_items.items) {
-                  apiRule.action.cart_items.items = {}
+              if (typeof rule.config.giftProduct === "object" && rule.config.giftProduct.id) {
+                productId = rule.config.giftProduct.id
+                productName = rule.config.giftProduct.name || `Product ${productId}`
+              } else if (typeof rule.config.giftProduct === "string") {
+                try {
+                  // Try to parse as JSON first
+                  const parsed = JSON.parse(rule.config.giftProduct)
+                  productId = parsed.id || Number(rule.config.giftProduct)
+                  productName = parsed.name || `Product ${productId}`
+                } catch (e) {
+                  // Not JSON, just convert to number
+                  productId = Number(rule.config.giftProduct)
+                  productName = `Product ${productId}`
                 }
-
-                apiRule.action.cart_items.items.not = exclusionItems
+              } else {
+                productId = 0 // Default fallback
               }
-            }
-          } else if (rule.reward === "discount_subtotal") {
-            // Subtotal discount reward
-            apiRule.action.cart = {
-              discount: {},
-            }
 
-            // Set discount type and amount
-            if (rule.config?.discountType === "percentage") {
-              apiRule.action.cart.discount.percentage_amount = String(rule.config.discountValue || 10)
-            } else {
-              apiRule.action.cart.discount.fixed_amount = String(rule.config.discountValue || 10)
-            }
-          } else if (rule.reward === "fixed_price" && rule.config?.price) {
-            // Fixed price reward
-            apiRule.action.cart_items = {
-              fixed_price: {
-                amount: String(rule.config.price),
-              },
-              quantity: rule.config?.quantity || 1,
-            }
-
-            // Process reward inclusion rules for fixed price
-            if (rule.config?.rewardInclusionRule) {
-              const inclusionItems = processInclusionRule(rule.config.rewardInclusionRule)
-
-              if (inclusionItems && !inclusionItems.all) {
-                apiRule.action.cart_items.items = inclusionItems
+              if (productId > 0) {
+                apiRule.action.gift_item = {
+                  quantity: rule.config.giftQuantity || 1,
+                  product_id: productId,
+                  product_name: productName,
+                }
               }
-            }
-          }
+            } else if (rule.reward === "discount_products") {
+              // Product discount reward
+              apiRule.action.cart_items = {
+                discount: {},
+                strategy: rule.config?.appliedTarget?.toUpperCase() || "LEAST_EXPENSIVE",
+                add_free_item: false,
+                as_total: rule.config?.discountFrom === "total_price" || false,
+                include_items_considered_by_condition: rule.config?.includeConditionProducts || false,
+                exclude_items_on_sale: !(rule.config?.includeOnSale || false),
+                quantity: rule.config?.appliedQuantity || 1,
+              }
 
-          // If no specific action was set, provide a default one to avoid API errors
-          if (Object.keys(apiRule.action).length === 0) {
-            if (rule.action && Object.keys(rule.action).length > 0) {
-              // Use the existing action if available
-              apiRule.action = rule.action
-            } else {
-              // Default to a discount action
-              apiRule.action = {
-                cart_items: {
-                  discount: {
-                    percentage_amount: "10",
-                  },
-                  strategy: "LEAST_EXPENSIVE",
-                  add_free_item: false,
-                  as_total: false,
-                  include_items_considered_by_condition: true,
-                  exclude_items_on_sale: false,
-                  quantity: 1,
-                },
+              // Set discount type and amount
+              if (rule.config?.discountType === "percentage") {
+                apiRule.action.cart_items.discount.percentage_amount = String(rule.config.discountValue || 10)
+              } else {
+                apiRule.action.cart_items.discount.fixed_amount = String(rule.config.discountValue || 10)
+              }
+            } else if (rule.reward === "free_shipping") {
+              // Free shipping reward
+              apiRule.action.shipping = {
+                free_shipping: true,
+                zone_ids: "*",
+                
+              }
+
+              if (
+                rule.config?.shippingZoneType === "selected" &&
+                rule.config.selectedZones &&
+                rule.config.selectedZones.length > 0
+              ) {
+                apiRule.action.shipping.zone_ids = rule.config.selectedZones.map((zone: Zone) => zone.zoneid)
+                apiRule.action.shipping.zone_names = rule.config.selectedZones.map((zone: Zone) => zone.name)
               }
             }
           }
+
+
+          
 
           // Convert complex objects to simple IDs for API compatibility
           if (apiRule.condition?.cart?.items?.products && Array.isArray(apiRule.condition.cart.items.products)) {
@@ -900,6 +718,29 @@ const addRule = (rule:Rule) => {
               if (typeof apiRule.condition.cart.items.not.brands[0] === "object") {
                 apiRule.condition.cart.items.not.brands = apiRule.condition.cart.items.not.brands.map((b: any) => b.id)
               }
+            }
+
+            // Handle nested and inside not
+            if (apiRule.condition.cart.items.not.and && Array.isArray(apiRule.condition.cart.items.not.and)) {
+              apiRule.condition.cart.items.not.and = apiRule.condition.cart.items.not.and.map((andItem: any) => {
+                const newAndItem = { ...andItem }
+
+                // Process brands in and condition
+                if (newAndItem.brands && Array.isArray(newAndItem.brands)) {
+                  if (typeof newAndItem.brands[0] === "object") {
+                    newAndItem.brands = newAndItem.brands.map((b: any) => b.id)
+                  }
+                }
+
+                // Process categories in and condition
+                if (newAndItem.categories && Array.isArray(newAndItem.categories)) {
+                  if (typeof newAndItem.categories[0] === "object") {
+                    newAndItem.categories = newAndItem.categories.map((c: any) => c.id)
+                  }
+                }
+
+                return newAndItem
+              })
             }
           }
 
@@ -948,74 +789,33 @@ const addRule = (rule:Rule) => {
                     newAndItem.not.brands = newAndItem.not.brands.map((b: any) => b.id)
                   }
                 }
+
+                // Handle nested and inside not
+                if (newAndItem.not.and && Array.isArray(newAndItem.not.and)) {
+                  newAndItem.not.and = newAndItem.not.and.map((nestedAndItem: any) => {
+                    const newNestedAndItem = { ...nestedAndItem }
+
+                    // Process brands in nested and condition
+                    if (newNestedAndItem.brands && Array.isArray(newNestedAndItem.brands)) {
+                      if (typeof newNestedAndItem.brands[0] === "object") {
+                        newNestedAndItem.brands = newNestedAndItem.brands.map((b: any) => b.id)
+                      }
+                    }
+
+                    // Process categories in nested and condition
+                    if (newNestedAndItem.categories && Array.isArray(newNestedAndItem.categories)) {
+                      if (typeof newNestedAndItem.categories[0] === "object") {
+                        newNestedAndItem.categories = newNestedAndItem.categories.map((c: any) => c.id)
+                      }
+                    }
+
+                    return newNestedAndItem
+                  })
+                }
               }
 
               return newAndItem
             })
-          }
-
-          // Process action items similarly
-          if (apiRule.action?.cart_items?.items) {
-            if (apiRule.action.cart_items.items.products && Array.isArray(apiRule.action.cart_items.items.products)) {
-              if (typeof apiRule.action.cart_items.items.products[0] === "object") {
-                apiRule.action.cart_items.items.products = apiRule.action.cart_items.items.products.map(
-                  (p: any) => p.id,
-                )
-              }
-            }
-
-            if (
-              apiRule.action.cart_items.items.categories &&
-              Array.isArray(apiRule.action.cart_items.items.categories)
-            ) {
-              if (typeof apiRule.action.cart_items.items.categories[0] === "object") {
-                apiRule.action.cart_items.items.categories = apiRule.action.cart_items.items.categories.map(
-                  (c: any) => c.id,
-                )
-              }
-            }
-
-            if (apiRule.action.cart_items.items.brands && Array.isArray(apiRule.action.cart_items.items.brands)) {
-              if (typeof apiRule.action.cart_items.items.brands[0] === "object") {
-                apiRule.action.cart_items.items.brands = apiRule.action.cart_items.items.brands.map((b: any) => b.id)
-              }
-            }
-
-            // Process not conditions in action items
-            if (apiRule.action.cart_items.items.not) {
-              if (
-                apiRule.action.cart_items.items.not.products &&
-                Array.isArray(apiRule.action.cart_items.items.not.products)
-              ) {
-                if (typeof apiRule.action.cart_items.items.not.products[0] === "object") {
-                  apiRule.action.cart_items.items.not.products = apiRule.action.cart_items.items.not.products.map(
-                    (p: any) => p.id,
-                  )
-                }
-              }
-
-              if (
-                apiRule.action.cart_items.items.not.categories &&
-                Array.isArray(apiRule.action.cart_items.items.not.categories)
-              ) {
-                if (typeof apiRule.action.cart_items.items.not.categories[0] === "object") {
-                  apiRule.action.cart_items.items.not.categories = apiRule.action.cart_items.items.not.categories.map(
-                    (c: any) => c.id,
-                  )
-                }
-              }
-
-              if (
-                apiRule.action.cart_items.items.not.brands &&
-                Array.isArray(apiRule.action.cart_items.items.not.brands)
-              ) {
-                if (typeof apiRule.action.cart_items.items.not.brands[0] === "object") {
-                  apiRule.action.cart_items.items.not.brands = apiRule.action.cart_items.items.not.brands.map(
-                    (b: any) => b.id,
-                  )
-                }
-              }
-            }
           }
 
           return apiRule
@@ -1024,7 +824,7 @@ const addRule = (rule:Rule) => {
 
       // Prepare the payload
       const payload = {
-        name: formData.name,
+        name: formData.name || "New Coupon",
         channels: selectedChannelIds.map((id) => ({ id: Number(id) })),
         created_from: "react_ui",
         customer: {
@@ -1037,10 +837,18 @@ const addRule = (rule:Rule) => {
             : [],
           segments: null,
         },
-        rules: formData.rules.length > 0 ? convertRulesToApiFormat(formData.rules) : [],
+        rules: convertRulesToApiFormat(formData.rules),
         currency_code: formData.currencyCode || "*",
         redemption_type: "COUPON",
-        shipping_address: null,
+        shipping_address:
+          formData.selectedCountries.length > 0
+            ? {
+                countries: formData.selectedCountries.map((country) => ({
+                  iso2_country_code:
+                    typeof country.id === "string" ? country.id : country.name.substring(0, 2).toUpperCase(),
+                })),
+              }
+            : null,
         current_uses: 0,
         max_uses: formData.maxUses ? Number(formData.maxUses) : null,
         start_date: formatDateWithTimezone(formData.startDate),
@@ -1139,9 +947,4 @@ export const useCouponContext = () => {
     throw new Error("useCouponContext must be used within a CouponProvider")
   }
   return context
-}
-
-interface ExclusionRule {
-  type: string
-  value: string
 }
