@@ -266,7 +266,7 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
     categories: "",
 
     // Other settings
-    canBeUsedWithOtherPromotions: true,
+    canBeUsedWithOtherPromotions: false,
     overrideAutomatic: false,
     quantity: "1",
     currencyCode: "*",
@@ -824,7 +824,7 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
 
       // Prepare the payload
       const payload = {
-        name: formData.name || "New Coupon",
+        name: formData.name,
         channels: selectedChannelIds.map((id) => ({ id: Number(id) })),
         created_from: "react_ui",
         customer: {

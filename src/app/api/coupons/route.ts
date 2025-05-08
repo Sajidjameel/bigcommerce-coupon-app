@@ -89,8 +89,8 @@ export async function POST(req: Request): Promise<NextResponse> {
 
       // Build the clean payload without duplicates
       const payload = {
-        name: body.name || "New Coupon",
-        channels: [{ id: 1 }], // Default to channel 1
+        name: body.name,
+        channels: [], // Default to channel 1
         created_from: "react_ui",
         customer: {
           group_ids: [],
@@ -109,8 +109,8 @@ export async function POST(req: Request): Promise<NextResponse> {
         end_date: null,
         status: "ENABLED",
         schedule: null,
-        can_be_used_with_other_promotions: true,
-        coupon_overrides_automatic_when_offering_higher_discounts: true,
+        can_be_used_with_other_promotions: body.can_be_used_with_other_promotions,
+        coupon_overrides_automatic_when_offering_higher_discounts: body.coupon_overrides_automatic_when_offering_higher_discounts,
         display_name: "",
       }
 
@@ -161,7 +161,7 @@ export async function POST(req: Request): Promise<NextResponse> {
       coupon: codes,
       codes: codeObjects[0] || null,
       can_be_used_with_other_promotions: true,
-      channels: [{ id: 1 }],
+      channels: [],
       coupon_overrides_automatic_when_offering_higher_discounts: false,
       created_from: "react_ui",
       currency_code: "*",
@@ -176,7 +176,7 @@ export async function POST(req: Request): Promise<NextResponse> {
       end_date: null,
       id: codeObjects.length > 0 ? codeObjects[0].id : null,
       max_uses: null,
-      name: body.name || "New Coupon",
+      name: body.name,
       rules: formattedRules,
       schedule: null,
       shipping_address:null ,
