@@ -266,7 +266,7 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
     categories: "",
 
     // Other settings
-    canBeUsedWithOtherPromotions: false,
+    canBeUsedWithOtherPromotions: true,
     overrideAutomatic: false,
     quantity: "1",
     currencyCode: "*",
@@ -824,7 +824,7 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
 
       // Prepare the payload
       const payload = {
-        name: formData.name,
+        name: formData.name || "New Coupon",
         channels: selectedChannelIds.map((id) => ({ id: Number(id) })),
         created_from: "react_ui",
         customer: {
@@ -840,15 +840,14 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
         rules: convertRulesToApiFormat(formData.rules),
         currency_code: formData.currencyCode || "*",
         redemption_type: "COUPON",
-        shipping_address:
-          formData.selectedCountries.length > 0
-            ? {
-                countries: formData.selectedCountries.map((country) => ({
-                  iso2_country_code:
-                    typeof country.id === "string" ? country.id : country.name.substring(0, 2).toUpperCase(),
-                })),
-              }
-            : null,
+        shipping_address: formData.selectedCountries?.length > 0
+    ? { 
+        countries: formData.selectedCountries.map((country) => ({
+          iso2_country_code:country.id || country.name?.toUpperCase()
+        })) 
+      
+      }
+    : null,
         current_uses: 0,
         max_uses: formData.maxUses ? Number(formData.maxUses) : null,
         start_date: formatDateWithTimezone(formData.startDate),
@@ -864,7 +863,8 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
           : null,
         can_be_used_with_other_promotions: formData.canBeUsedWithOtherPromotions,
         coupon_overrides_automatic_when_offering_higher_discounts: formData.overrideAutomatic,
-        display_name: formData.displayName || "",
+        display_name: formData.displayName ,
+        
       }
 
       console.log("Sending payload:", JSON.stringify(payload, null, 2))
