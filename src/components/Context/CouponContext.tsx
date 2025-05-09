@@ -114,11 +114,12 @@ interface Channel {
   name: string
 }
 
-interface CouponFormData {
+export interface CouponFormData {
   // Basic info
   name: string
   displayName: string
-
+  codes?: string | { id?: string | number; code: string } | Array<string | { id?: string | number; code: string }>;
+  
   // Schedule
   startDate: string
   startTime: string
@@ -226,13 +227,13 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
   const [couponCodes, setCouponCodes] = useState<string[]>([])
   const [channels, setChannels] = useState<Channel[]>([])
   const [showChannelModal, setShowChannelModal] = useState(false)
-  const [selectedChannelIds, setSelectedChannelIds] = useState<string[]>(["1"]) // Default to channel 1
+  const [selectedChannelIds, setSelectedChannelIds] = useState<string[]>(["0"]) // Default to channel 1
 
   const [formData, setFormData] = useState<CouponFormData>({
     // Basic info
     name: "",
     displayName: "",
-
+    codes: "", // Can be a string or an array of objects
     // Schedule
     startDate: new Date().toISOString(),
     startTime: "5:00 AM",
@@ -282,7 +283,7 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Channels
     channels: [],
-    selectedChannelIds: ["1"], // Default to channel 1
+    selectedChannelIds: ["0"], // Default to channel 1
   })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -313,7 +314,7 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
       rules: prev.rules.filter((_, i) => i !== index),
     }))
   }
-
+//update rule 
   const updateRule = (index: number, rule: Rule) => {
     setFormData((prev) => {
       const newRules = [...prev.rules]
@@ -382,121 +383,152 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
     }))
   }
 
-  // Helper function to parse product, category, or brand IDs from a string
-  const parseIds = (value: string): Array<{ id: number; name: string }> => {
-    if (!value) return []
+ // Add this helper function right after your parseIds function
+const extractIds = (items: Array<{ id: number; name: string }>): number[] => {
+  return items.map(item => item.id);
+};
 
+// Your existing parseIds function remains unchanged
+const parseIds = (value: string): Array<{ id: number; name: string }> => {
+  if (!value) return [];
+
+  try {
+    // Try to parse as JSON first (for objects with id property)
     try {
-      // Try to parse as JSON first (for objects with id property)
-      try {
-        const parsed = JSON.parse(value)
-        if (parsed && parsed.id) {
-          return [{ id: Number(parsed.id), name: parsed.name || `Item ${parsed.id}` }]
-        }
-      } catch (e) {
-        // Not JSON, continue with comma parsing
+      const parsed = JSON.parse(value);
+      if (parsed && parsed.id) {
+        return [{ id: Number(parsed.id), name: parsed.name || `Item ${parsed.id}` }];
       }
-
-      // Parse comma-separated list
-      return value
-        .split(",")
-        .map((item) => {
-          // Try to extract id from JSON string if possible
-          try {
-            const parsed = JSON.parse(item.trim())
-            return parsed && parsed.id
-              ? { id: Number(parsed.id), name: parsed.name || `Item ${parsed.id}` }
-              : { id: Number(item.trim()), name: `Item ${item.trim()}` }
-          } catch (e) {
-            // Not JSON, just convert to number
-            return { id: Number(item.trim()), name: `Item ${item.trim()}` }
-          }
-        })
-        .filter((item) => !isNaN(item.id) && item.id > 0)
     } catch (e) {
-      console.error("Error parsing IDs:", e)
-      return []
+      // Not JSON, continue with comma parsing
     }
+
+    // Parse comma-separated list
+    return value
+      .split(",")
+      .map((item) => {
+        // Try to extract id from JSON string if possible
+        try {
+          const parsed = JSON.parse(item.trim());
+          return parsed && parsed.id
+            ? { id: Number(parsed.id), name: parsed.name || `Item ${parsed.id}` }
+            : { id: Number(item.trim()), name: `Item ${item.trim()}` };
+        } catch (e) {
+          // Not JSON, just convert to number
+          return { id: Number(item.trim()), name: `Item ${item.trim()}` };
+        }
+      })
+      .filter((item) => !isNaN(item.id) && item.id > 0);
+  } catch (e) {
+    console.error("Error parsing IDs:", e);
+    return [];
   }
+};
 
   // Helper function to process inclusion rules
-  const processInclusionRule = (inclusionRule: any) => {
-    if (!inclusionRule) return null
+const processInclusionRule = (inclusionRule: any) => {
+  if (!inclusionRule) return null;
 
-    const result: any = {}
+  const result: any = {};
 
-    if (inclusionRule.type === "individual" && inclusionRule.value) {
-      const products = parseIds(inclusionRule.value)
-      if (products.length > 0) {
-        result.products = products
-      }
-    } else if (inclusionRule.type === "category" && inclusionRule.value) {
-      const categories = parseIds(inclusionRule.value)
-      if (categories.length > 0) {
-        result.categories = categories
-      }
-    } else if (inclusionRule.type === "brand" && inclusionRule.value) {
-      const brands = parseIds(inclusionRule.value)
-      if (brands.length > 0) {
-        result.brands = brands
-      }
-    } else if (inclusionRule.type === "all") {
-      // No specific items for "all" type
-      return { all: true }
+  if (inclusionRule.type === "individual" && inclusionRule.value) {
+    const products = parseIds(inclusionRule.value);
+    if (products.length > 0) {
+      result.products = extractIds(products);
     }
-
-    return Object.keys(result).length > 0 ? result : null
+  } else if (inclusionRule.type === "category" && inclusionRule.value) {
+    const categories = parseIds(inclusionRule.value);
+    if (categories.length > 0) {
+      result.categories = extractIds(categories);
+    }
+  } else if (inclusionRule.type === "brand" && inclusionRule.value) {
+    const brands = parseIds(inclusionRule.value);
+    if (brands.length > 0) {
+      result.brands = extractIds(brands);
+    }
+  } else if (inclusionRule.type === "product_custom_field" && inclusionRule.name && inclusionRule.values) {
+    result.product_custom_field = {
+      name: inclusionRule.name,
+      values: Array.isArray(inclusionRule.values) ? inclusionRule.values : [inclusionRule.values]
+    };
+  } else if (inclusionRule.type === "product_option" && inclusionRule.name && inclusionRule.values) {
+    result.product_option = {
+      name: inclusionRule.name,
+      values: Array.isArray(inclusionRule.values) ? inclusionRule.values : [inclusionRule.values],
+      type: "string_match"
+    };
+  } else if (inclusionRule.type === "all") {
+    return { all: true };
   }
 
-
-
-
+  return Object.keys(result).length > 0 ? result : null;
+};
 
 
   // Helper function to process exclusion rules
   const processExclusionRules = (exclusionRules: any[]) => {
     if (!exclusionRules || !Array.isArray(exclusionRules) || exclusionRules.length === 0) {
-      return null
+      return null;
     }
-
-    const notConditions: any = {}
-
+  
+    const exclusionConditions: any[] = [];
+  
     for (const exclusion of exclusionRules) {
-      if (!exclusion) continue
-
+      if (!exclusion) continue;
+  
+      const condition: any = {};
+  
       if (exclusion.type === "individual" && exclusion.value) {
-        const products = parseIds(exclusion.value)
+        const products = parseIds(exclusion.value);
         if (products.length > 0) {
-          if (!notConditions.products) {
-            notConditions.products = []
-          }
-          notConditions.products.push(...products)
+          condition.products = extractIds(products);
         }
       } else if (exclusion.type === "category" && exclusion.value) {
-        const categories = parseIds(exclusion.value)
+        const categories = parseIds(exclusion.value);
         if (categories.length > 0) {
-          if (!notConditions.categories) {
-            notConditions.categories = []
-          }
-          notConditions.categories.push(...categories)
+          condition.categories = extractIds(categories);
         }
       } else if (exclusion.type === "brand" && exclusion.value) {
-        const brands = parseIds(exclusion.value)
+        const brands = parseIds(exclusion.value);
         if (brands.length > 0) {
-          if (!notConditions.brands) {
-            notConditions.brands = []
-          }
-          notConditions.brands.push(...brands)
+          condition.brands = extractIds(brands);
         }
+      } else if (exclusion.type === "product_custom_field" && exclusion.name && exclusion.values) {
+        condition.product_custom_field = {
+          name: exclusion.name,
+          values: Array.isArray(exclusion.values) ? exclusion.values : [exclusion.values]
+        };
+      } else if (exclusion.type === "product_option" && exclusion.name && exclusion.values) {
+        condition.product_option = {
+          name: exclusion.name,
+          values: Array.isArray(exclusion.values) ? exclusion.values : [exclusion.values],
+          type: "string_match"
+        };
+      }
+  
+      if (Object.keys(condition).length > 0) {
+        exclusionConditions.push(condition);
       }
     }
+  
+    if (exclusionConditions.length === 0) {
+      return null;
+    }
+  
+    // For multiple exclusion conditions, we need to combine them with AND
+    if (exclusionConditions.length > 1) {
+      return { and: exclusionConditions };
+    }
+    
+    // For single exclusion condition, return it directly
+    return exclusionConditions[0];
+  };
+  
 
-    return Object.keys(notConditions).length > 0 ? notConditions : null
-  }
 
+  
   // Helper function to create complex nested conditions
   const createComplexCondition = (rule: any) => {
-    // Create a condition structure that matches the payload format
     const condition: any = {
       cart: {
         minimum_quantity: rule.config?.reachingQuantity || 1,
@@ -504,11 +536,9 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
       },
     };
   
-    // Process inclusion and exclusion rules
     const inclusionItems = rule.config?.inclusionRule ? processInclusionRule(rule.config.inclusionRule) : null;
     const exclusionItems = rule.config?.exclusionRules ? processExclusionRules(rule.config.exclusionRules) : null;
   
-    // If we have both inclusion and exclusion rules, use an "and" condition
     if (inclusionItems && exclusionItems) {
       condition.cart.items.and = [];
   
@@ -519,20 +549,17 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
         condition.cart.items.and.push(inclusionItems);
       }
   
-      // Check if exclusion has multiple types (brand AND category)
-      if (exclusionItems.brands && exclusionItems.categories) {
-        // Create a nested "not" with "and" for multiple exclusion types
+      // Add exclusion as NOT condition
+      if (exclusionItems.and) {
+        // For multiple exclusion conditions, we need to wrap them in a NOT with AND
         condition.cart.items.and.push({
-          not: {
-            and: [
-              { brands: exclusionItems.brands },
-              { categories: exclusionItems.categories }
-            ],
-          },
+          not: exclusionItems
         });
       } else {
-        // Simple exclusion
-        condition.cart.items.and.push({ not: exclusionItems });
+        // For single exclusion condition
+        condition.cart.items.and.push({
+          not: exclusionItems
+        });
       }
     } else if (inclusionItems) {
       // Only inclusion rules
@@ -543,13 +570,17 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
       }
     } else if (exclusionItems) {
       // Only exclusion rules
-      condition.cart.items.not = exclusionItems;
+      if (exclusionItems.and) {
+        // For multiple exclusion conditions, we need to wrap them in a NOT with AND
+        condition.cart.items.not = exclusionItems;
+      } else {
+        // For single exclusion condition
+        condition.cart.items.not = exclusionItems;
+      }
     }
   
     return condition;
   };
-
-
 
 
 
@@ -564,21 +595,87 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
 
     try {
       // Format date with timezone for BigCommerce
-      const formatDateWithTimezone = (date: string) => {
-        if (!date) return new Date().toISOString()
+      const formatDateWithTimezone = (dateString: string, timeString: string) => {
+        if (!dateString) return null;
+      
+        // Create date object from the ISO string
+        const dateObj = new Date(dateString);
+        
+        // Extract date components (local time)
+        const year = dateObj.getFullYear();
+        const month = dateObj.getMonth();
+        const day = dateObj.getDate();
+      
+        // Default to midnight if no time provided
+        let hours = 0;
+        let minutes = 0;
+      
+        if (timeString) {
+          // Parse time string (format: "h:mm AM/PM")
+          const [timePart, period] = timeString.split(' ');
+          const [hoursStr, minutesStr] = timePart.split(':');
+          
+          hours = parseInt(hoursStr, 10);
+          minutes = parseInt(minutesStr || '0', 10);
+      
+          // Convert 12-hour format to 24-hour
+          if (period === 'PM' && hours < 12) {
+            hours += 12;
+          } else if (period === 'AM' && hours === 12) {
+            hours = 0;
+          }
+        }
+      
+        // Create new date in local timezone
+        const localDate = new Date(year, month, day, hours, minutes, 0);
+      
+        // Format the date components
+        const pad = (num: number) => num.toString().padStart(2, '0');
+        
+        const formattedDate = [
+          localDate.getFullYear(),
+          pad(localDate.getMonth() + 1),
+          pad(localDate.getDate())
+        ].join('-');
+      
+        const formattedTime = [
+          pad(localDate.getHours()),
+          pad(localDate.getMinutes()),
+          pad(localDate.getSeconds())
+        ].join(':');
+      
+        // Get timezone offset in minutes and convert to ±HH:MM
+        const offset = localDate.getTimezoneOffset();
+        const offsetHours = Math.floor(Math.abs(offset) / 60);
+        const offsetMinutes = Math.abs(offset) % 60;
+        const offsetSign = offset > 0 ? '-' : '+'; // Note the sign inversion
+      
+        return `${formattedDate}T${formattedTime}${offsetSign}${pad(offsetHours)}:${pad(offsetMinutes)}`;
+      };
+      
+      const formatTimeForSchedule = (timeString: string) => {
+        if (!timeString) return '00:00:00';
+        
+        const [timePart, period] = timeString.split(' ');
+        const [hoursStr, minutesStr] = timePart.split(':');
+        
+        let hours = parseInt(hoursStr, 10);
+        const minutes = parseInt(minutesStr || '0', 10);
+      
+        // Convert 12-hour format to 24-hour
+        if (period === 'PM' && hours < 12) hours += 12;
+        if (period === 'AM' && hours === 12) hours = 0;
+      
+        return [
+          hours.toString().padStart(2, '0'),
+          minutes.toString().padStart(2, '0'),
+          '00'
+        ].join(':');
+      };
+      
 
-        const dateObj = new Date(date)
-        // Format with timezone offset
-        const offset = dateObj.getTimezoneOffset()
-        const offsetHours = Math.abs(Math.floor(offset / 60))
-          .toString()
-          .padStart(2, "0")
-        const offsetMinutes = Math.abs(offset % 60)
-          .toString()
-          .padStart(2, "0")
-        const offsetSign = offset <= 0 ? "+" : "-"
-        return dateObj.toISOString().replace(/\.\d{3}Z$/, `${offsetSign}${offsetHours}:${offsetMinutes}`)
-      }
+
+      
 
       // Convert UI rules to BigCommerce API format
       const convertRulesToApiFormat = (rules: ExtendedRule[]) => {
@@ -825,7 +922,14 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
       // Prepare the payload
       const payload = {
         name: formData.name || "New Coupon",
-        channels: selectedChannelIds.map((id) => ({ id: Number(id) })),
+        channels: selectedChannelIds[0] === "0" 
+        ? []   : selectedChannelIds.map((id) => ({ id: Number(id) })),
+      
+
+        codes: {
+          code: formData.codes || "",
+          max_uses_per_customer: formData.maxUsesPerCustomer || null
+        },
         created_from: "react_ui",
         customer: {
           group_ids: formData.customerGroupIds
@@ -838,7 +942,7 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
           segments: null,
         },
         rules: convertRulesToApiFormat(formData.rules),
-        currency_code: formData.currencyCode || "*",
+        currency_code: formData.currencyCode||"GBP",
         redemption_type: "COUPON",
         shipping_address: formData.selectedCountries?.length > 0
     ? { 
@@ -850,22 +954,24 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
     : null,
         current_uses: 0,
         max_uses: formData.maxUses ? Number(formData.maxUses) : null,
-        start_date: formatDateWithTimezone(formData.startDate),
-        end_date: formData.endDate ? formatDateWithTimezone(formData.endDate) : null,
-        status: formData.status,
-        schedule: formData.limitAvailability
-          ? {
-              week_count: formData.weekCount,
-              selected_weekdays: formData.selectedWeekdays,
-              availability_start_time: formData.availabilityStartTime,
-              availability_end_time: formData.availabilityEndTime,
-            }
+        start_date: formatDateWithTimezone(formData.startDate, formData.startTime),
+        end_date: formData.endDate 
+          ? formatDateWithTimezone(formData.endDate, formData.endTime) 
           : null,
+          schedule: formData.limitAvailability ? {
+            week_count: formData.weekCount,
+            selected_weekdays: formData.selectedWeekdays,
+            availability_start_time: formatTimeForSchedule(formData.availabilityStartTime),
+            availability_end_time: formatTimeForSchedule(formData.availabilityEndTime)
+          } : null,
+          status: formData.status,
         can_be_used_with_other_promotions: formData.canBeUsedWithOtherPromotions,
         coupon_overrides_automatic_when_offering_higher_discounts: formData.overrideAutomatic,
         display_name: formData.displayName ,
         
       }
+     
+      
 
       console.log("Sending payload:", JSON.stringify(payload, null, 2))
 

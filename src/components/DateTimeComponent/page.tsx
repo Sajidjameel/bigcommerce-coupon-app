@@ -47,10 +47,13 @@ export function DatePicker({ label, selectedDate, onChange, className = "" }: Da
 
   // Select a date
   const selectDate = (day: number) => {
-    const newDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day)
-    onChange(newDate)
-    setShowCalendar(false)
-  }
+    const newDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+    onChange(newDate); // This should trigger the context update
+    setShowCalendar(false);
+  };
+
+
+
 
   // Check if a date is the selected date
   const isSelectedDate = (day: number): boolean => {
@@ -255,6 +258,74 @@ export function DateTimeExample() {
     <div className="flex items-center gap-2">
       <DatePicker label="Starting" selectedDate={date} onChange={setDate} />
       <TimeSelect selectedTime={time} onChange={setTime} />
+    </div>
+  )
+}
+
+// ========== Date Time Picker with Coupon Context Integration ==========
+import { useCouponContext } from "../Context/CouponContext"
+
+export function CouponDateTimePicker() {
+  const { formData, setFormData } = useCouponContext()
+
+  // Handle start date change
+  const handleStartDateChange = (date: Date) => {
+    setFormData((prev) => ({
+      ...prev,
+      startDate: date.toISOString(),
+    }))
+  }
+
+  // Handle end date change
+  const handleEndDateChange = (date: Date) => {
+    setFormData((prev) => ({
+      ...prev,
+      endDate: date.toISOString(),
+    }))
+  }
+
+  // Handle start time change
+  const handleStartTimeChange = (time: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      startTime: time,
+    }))
+  }
+
+  // Handle end time change
+  const handleEndTimeChange = (time: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      endTime: time,
+    }))
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-medium mb-2">Coupon Start Date & Time</h3>
+        <div className="flex flex-wrap items-center gap-4">
+          <DatePicker
+            label="Start Date"
+            selectedDate={formData.startDate ? new Date(formData.startDate) : new Date()}
+            onChange={handleStartDateChange}
+          />
+          <TimeSelect selectedTime={formData.startTime || "12:00 AM"} onChange={handleStartTimeChange} />
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-lg font-medium mb-2">Coupon End Date & Time (Optional)</h3>
+        <div className="flex flex-wrap items-center gap-4">
+          <DatePicker
+            label="End Date"
+            selectedDate={formData.endDate ? new Date(formData.endDate) : new Date()}
+            onChange={handleEndDateChange}
+          />
+          <TimeSelect selectedTime={formData.endTime || "11:59 PM"} onChange={handleEndTimeChange} />
+        </div>
+        <p className="text-sm text-gray-500 mt-2">Leave empty for no expiration date</p>
+      </div>
     </div>
   )
 }

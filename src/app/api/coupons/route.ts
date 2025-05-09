@@ -81,22 +81,41 @@ export async function POST(req: Request): Promise<NextResponse> {
     for (let i = 0; i < quantity; i++) {
       const code = await generateUniqueCode()
 
-      // Format dates for BigCommerce
-      const now = new Date()
-      const offset = now.getTimezoneOffset()
-      const offsetHours = Math.abs(Math.floor(offset / 60))
-        .toString()
-        .padStart(2, "0")
-      const offsetMinutes = Math.abs(offset % 60)
-        .toString()
-        .padStart(2, "0")
-      const offsetSign = offset <= 0 ? "+" : "-"
-      const startDate = now.toISOString().replace(/\.\d{3}Z$/, `${offsetSign}${offsetHours}:${offsetMinutes}`)
+      const formatDateForBigCommerce = (dateString: string) => {
+        if (!dateString) return null;
+        
+        const date = new Date(dateString);
+        
+        // Get timezone offset in minutes
+        const offset = date.getTimezoneOffset();
+        const offsetHours = Math.abs(Math.floor(offset / 60))
+          .toString()
+          .padStart(2, '0');
+        const offsetMinutes = Math.abs(offset % 60)
+          .toString()
+          .padStart(2, '0');
+        const offsetSign = offset > 0 ? '-' : '+'; // Note: inverted from normal
+      
+        // Format as YYYY-MM-DDTHH:MM:SS±HH:MM
+        return [
+          date.getFullYear(),
+          (date.getMonth() + 1).toString().padStart(2, '0'),
+          date.getDate().toString().padStart(2, '0')
+        ].join('-') + 'T' + [
+          date.getHours().toString().padStart(2, '0'),
+          date.getMinutes().toString().padStart(2, '0'),
+          date.getSeconds().toString().padStart(2, '0')
+        ].join(':') + offsetSign + offsetHours + ':' + offsetMinutes;
+      };
+      
+      // Then in your POST handler, replace the date formatting with:
+      const startDate = body.start_date ? formatDateForBigCommerce(body.start_date) : formatDateForBigCommerce(new Date().toISOString());
+      const endDate = body.end_date ? formatDateForBigCommerce(body.end_date) : null;
 
       // Build the clean payload without duplicates
       const payload = {
         name: body.name,
-        channels: body.channels, // Default to channel 1
+        channels:body.channels && body.channels.length > 0 ? body.channels : [], // Default to channel 1
         created_from: "react_ui",
         
         customer: {
@@ -114,8 +133,8 @@ export async function POST(req: Request): Promise<NextResponse> {
         } : null,
         current_uses: body.current_uses || 0,
         max_uses: body.max_uses,
-        start_date: body.start_date || startDate,
-        end_date: body.end_date || null,
+        start_date: startDate || startDate,
+        end_date: endDate || null,
         status: "ENABLED",
         schedule: body.schedule,
         can_be_used_with_other_promotions: body.can_be_used_with_other_promotions,
@@ -170,7 +189,7 @@ export async function POST(req: Request): Promise<NextResponse> {
       coupon: codes,
       codes: codeObjects[0] || null,
       can_be_used_with_other_promotions: true,
-      channels: [],
+      channels: body.channels && body.channels.length > 0 ? body.channels : [],
       coupon_overrides_automatic_when_offering_higher_discounts: false,
       created_from: "react_ui",
       currency_code: "*",
@@ -181,15 +200,15 @@ export async function POST(req: Request): Promise<NextResponse> {
         segments: null,
         excluded_group_ids: [],
       },
-      display_name: "",
-      end_date: null,
+      display_name: body.display_name || null,
+      end_date: body.end_date || null,
       id: codeObjects.length > 0 ? codeObjects[0].id : null,
-      max_uses: null,
+      max_uses: body.max_uses_per_customer || null,
       name: body.name,
       rules: formattedRules,
-      schedule: null,
-      shipping_address:null ,
-      start_date: new Date().toISOString(),
+      schedule: body.schedule || null,
+      shipping_address:body.shipping_address,
+      start_date: body.start_date || null,
       status: "ENABLED",
     })
   } catch (error) {
