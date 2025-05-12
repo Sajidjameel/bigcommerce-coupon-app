@@ -2,7 +2,6 @@ import { NextResponse } from "next/server"
 import crypto from "crypto"
 import { cookies } from "next/headers"
 
-
 // ENV VARS
 const STORE_HASH = process.env.BIGCOMMERCE_STORE_HASH!
 const BASE_URL = `https://api.bigcommerce.com/stores/${STORE_HASH}/v3/promotions`
@@ -11,7 +10,6 @@ const BASE_URL = `https://api.bigcommerce.com/stores/${STORE_HASH}/v3/promotions
 async function generateUniqueCode(): Promise<string> {
   return crypto.randomBytes(5).toString("hex").toUpperCase()
 }
-
 
 // Helper function to create a coupon code
 async function createCouponCode(promotionId: number, code: string, accessToken: string): Promise<any> {
@@ -60,64 +58,95 @@ export async function POST(req: Request): Promise<NextResponse> {
 
     // Create properly formatted rules with both condition and action
     const formattedRules = Array.isArray(body.rules)
-    ? body.rules.map((rule: any, index: number) => ({
-        id: rule.id,
-        name: rule.name,
-        condition : rule.condition,
-        type: rule.type || body.ruleType || "custom",
-        apply_once: rule.apply_once ?? true,
-        stop: rule.stop ?? true,
-        conditions: rule.conditions || (rule.condition ? [rule.condition] : []),
-        action: rule.action || (rule.action ? [rule.action] : []),
-      
-        
+      ? body.rules.map((rule: any, index: number) => {
+          // Process the rule to ensure no default product IDs are used
+          if (rule.condition?.cart?.items?.products) {
+            // Remove default product ID 1 if it exists
+            rule.condition.cart.items.products = rule.condition.cart.items.products.filter((id: number) => id !== 1)
 
-      }))
-    : []
-  
-        console.log("shipping_address",body.shipping_address)
-     //   console.log(" body:", JSON.stringify(body));
+            // If no products are left, use a different approach
+            if (rule.condition.cart.items.products.length === 0) {
+              // Use a minimum subtotal condition instead
+              rule.condition.cart.subtotal = { min_amount: 0 }
+              delete rule.condition.cart.items.products
+            }
+          }
+
+          // Process fixed_price_set action to ensure no default product IDs
+          if (rule.action?.fixed_price_set?.items?.products) {
+            rule.action.fixed_price_set.items.products = rule.action.fixed_price_set.items.products.filter(
+              (id: number) => id !== 1,
+            )
+
+            // If no products are left and there's no other condition, use a different approach
+            if (rule.action.fixed_price_set.items.products.length === 0 && !rule.action.fixed_price_set.items.and) {
+              // If we have inclusion rules in the UI, make sure they're properly formatted
+              if (rule.config?.rewardInclusionRule?.type === "all") {
+                // For "all products", don't specify products
+                delete rule.action.fixed_price_set.items.products
+              }
+            }
+          }
+
+          // Process cart_items action to ensure no default product IDs
+          if (rule.action?.cart_items?.items?.products) {
+            rule.action.cart_items.items.products = rule.action.cart_items.items.products.filter(
+              (id: number) => id !== 1,
+            )
+
+            // If no products are left and there's no other condition, use a different approach
+            if (rule.action.cart_items.items.products.length === 0 && !rule.action.cart_items.items.and) {
+              // If we have inclusion rules in the UI, make sure they're properly formatted
+              if (rule.config?.rewardInclusionRule?.type === "all") {
+                // For "all products", don't specify products
+                delete rule.action.cart_items.items.products
+              }
+            }
+          }
+
+          // For fixed price rewards, ensure we're using the right format
+          if (rule.reward === "fixed_price" && rule.config) {
+            // Make sure we have the fixed_price_set action
+            if (!rule.action.fixed_price_set) {
+              rule.action.fixed_price_set = {
+                fixed_price: String(rule.config.price || 0),
+                quantity: rule.config.quantity || 1,
+                strategy: (rule.config.applyTo || "Least expensive").toUpperCase().replace(" ", "_"),
+                exclude_items_on_sale: !(rule.config.includeOnSale || false),
+                include_items_considered_by_condition: rule.config.includeConditionProducts || false,
+                items: rule.action.fixed_price_set?.items || {},
+              }
+            }
+          }
+
+          return {
+            id: rule.id,
+            name: rule.name,
+            condition: rule.condition,
+            type: rule.type || body.ruleType || "custom",
+            apply_once: rule.apply_once ?? true,
+            stop: rule.stop ?? true,
+            conditions: rule.conditions || (rule.condition ? [rule.condition] : []),
+            action: rule.action || (rule.action ? [rule.action] : []),
+          }
+        })
+      : []
+
+    console.log("shipping_address", body.shipping_address)
     console.log("Formatted rules:", JSON.stringify(formattedRules, null, 2))
+
     for (let i = 0; i < quantity; i++) {
       const code = await generateUniqueCode()
 
-      const formatDateForBigCommerce = (dateString: string) => {
-        if (!dateString) return null;
-        
-        const date = new Date(dateString);
-        
-        // Get timezone offset in minutes
-        const offset = date.getTimezoneOffset();
-        const offsetHours = Math.abs(Math.floor(offset / 60))
-          .toString()
-          .padStart(2, '0');
-        const offsetMinutes = Math.abs(offset % 60)
-          .toString()
-          .padStart(2, '0');
-        const offsetSign = offset > 0 ? '-' : '+'; // Note: inverted from normal
-      
-        // Format as YYYY-MM-DDTHH:MM:SS±HH:MM
-        return [
-          date.getFullYear(),
-          (date.getMonth() + 1).toString().padStart(2, '0'),
-          date.getDate().toString().padStart(2, '0')
-        ].join('-') + 'T' + [
-          date.getHours().toString().padStart(2, '0'),
-          date.getMinutes().toString().padStart(2, '0'),
-          date.getSeconds().toString().padStart(2, '0')
-        ].join(':') + offsetSign + offsetHours + ':' + offsetMinutes;
-      };
-      
-      // Then in your POST handler, replace the date formatting with:
-      const startDate = body.start_date ? formatDateForBigCommerce(body.start_date) : formatDateForBigCommerce(new Date().toISOString());
-      const endDate = body.end_date ? formatDateForBigCommerce(body.end_date) : null;
+      const startDate = body.start_date || null
+      const endDate = body.end_date || null
 
       // Build the clean payload without duplicates
       const payload = {
         name: body.name,
-        channels:body.channels && body.channels.length > 0 ? body.channels : [], // Default to channel 1
+        channels: body.channels && body.channels.length > 0 ? body.channels : [], // Default to channel 1
         created_from: "react_ui",
-        
+
         customer: {
           group_ids: body.customer.group_ids || [],
           minimum_order_count: 1,
@@ -125,12 +154,14 @@ export async function POST(req: Request): Promise<NextResponse> {
           segments: body.customer?.segments || null,
         },
         rules: formattedRules,
-        condition:body.rules.condition,
+        condition: body.rules.condition,
         currency_code: "*",
         redemption_type: "COUPON",
-        shipping_address: body.shipping_address ? {
-          countries: body.shipping_address.countries.map((c: any) => c.iso2_country_code)
-        } : null,
+        shipping_address: body.shipping_address
+          ? {
+              countries: body.shipping_address.countries.map((c: any) => c.iso2_country_code),
+            }
+          : null,
         current_uses: body.current_uses || 0,
         max_uses: body.max_uses,
         start_date: startDate || startDate,
@@ -138,8 +169,9 @@ export async function POST(req: Request): Promise<NextResponse> {
         status: "ENABLED",
         schedule: body.schedule,
         can_be_used_with_other_promotions: body.can_be_used_with_other_promotions,
-        coupon_overrides_automatic_when_offering_higher_discounts: body.coupon_overrides_automatic_when_offering_higher_discounts,
-        display_name: body.display_name, 
+        coupon_overrides_automatic_when_offering_higher_discounts:
+          body.coupon_overrides_automatic_when_offering_higher_discounts,
+        display_name: body.display_name,
       }
 
       console.log("Generated Payload:", JSON.stringify(payload, null, 2))
@@ -207,7 +239,7 @@ export async function POST(req: Request): Promise<NextResponse> {
       name: body.name,
       rules: formattedRules,
       schedule: body.schedule || null,
-      shipping_address:body.shipping_address,
+      shipping_address: body.shipping_address,
       start_date: body.start_date || null,
       status: "ENABLED",
     })

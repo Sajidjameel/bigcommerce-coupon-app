@@ -56,8 +56,8 @@ export function DiscountSubtotalReward({ rule, onConfigChange }: DiscountSubtota
           <div className="relative">
             <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-700">£</span>
             <input
-              type="number"
-              className="border border-gray-300 rounded pl-8 pr-3 py-2 text-sm w-24"
+              type="number"  
+              className="border border-gray-300 rounded pl-8 pr-3 py-2 text-sm w-24"  
               value={rule.config.discountValue || 10}
               onChange={(e) => onConfigChange("discountValue", Number(e.target.value))}
             />

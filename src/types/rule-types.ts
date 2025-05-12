@@ -34,7 +34,18 @@ export type Rule = {
     rewardInclusionRule?: InclusionRule
     rewardExclusionRules?: ExclusionRule[]
     // Additional properties
+   perCart?: string
     stop?: boolean
+     fixedPrice?: number
+    customFields?: Array<{
+      name: string
+      values: string[]
+    }>
+    productOptions?: Array<{
+      name: string
+      values: string[]
+      type?: string
+    }>
   }
   action?: {
     gift_item?: {
@@ -98,6 +109,7 @@ export interface InclusionRule {
     value: string
     selector?: string
   }[]
+    selectedItems?: Array<{ id: number; name: string }>
 }
 
 export type AdditionalCondition = {
@@ -112,6 +124,7 @@ export type ExclusionRule = {
   type: string // "individual", "category", "brand", "custom_field", "product_option"
   value?: string
   selector?: string
+  selectedItems?: Array<{ id: number; name: string }>
 }
 
 export type RuleType = {

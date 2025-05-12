@@ -4,6 +4,7 @@ import type { Rule, InclusionRule, ExclusionRule } from "@/types/rule-types"
 import { MinusCircle, PlusCircle } from "lucide-react"
 import { ProductInclusionRule } from "../product-inclusion-rule"
 import { ProductExclusionRule } from "../product-exclusion-rule"
+import { useCallback, useEffect } from "react"
 
 interface FixedPriceRewardProps {
   rule: Rule
@@ -16,21 +17,49 @@ export function FixedPriceReward({ rule, onConfigChange }: FixedPriceRewardProps
   const applyTo = rule?.config?.applyTo ?? "Least expensive"
   const includeOnSale = rule?.config?.includeOnSale ?? false
   const includeConditionProducts = rule?.config?.includeConditionProducts ?? false
-  const rewardInclusionRule = rule?.config?.rewardInclusionRule
-  const rewardExclusionRules = rule?.config?.rewardExclusionRules ?? []
+  const perCart = rule?.config?.perCart ?? "unlimited"
+  const appliedOn = rule?.config?.appliedOn ?? "all"
+
+  // Add this at the beginning of the component function
+  useEffect(() => {
+    // Initialize rewardInclusionRule if it doesn't exist
+    if (!rule.config.rewardInclusionRule) {
+      onConfigChange("rewardInclusionRule", {
+        id: `inclusion-${Date.now()}`,
+        type: "all",
+        value: "",
+      })
+    }
+
+    // Initialize rewardExclusionRules if it doesn't exist
+    if (!rule.config.rewardExclusionRules) {
+      onConfigChange("rewardExclusionRules", [])
+    }
+
+    // Initialize price field for fixed price reward
+    if (rule.config.price === undefined) {
+      onConfigChange("price", 0)
+    }
+  }, [rule.config, onConfigChange])
 
   const handleQuantityChange = (increment: boolean) => {
     const newQuantity = increment ? quantity + 1 : Math.max(1, quantity - 1)
     onConfigChange("quantity", newQuantity)
   }
 
-  const handleRewardInclusionRuleChange = (updatedRule: InclusionRule) => {
-    onConfigChange("rewardInclusionRule", updatedRule)
-  }
+  const handleRewardInclusionRuleChange = useCallback(
+    (updatedRule: InclusionRule) => {
+      onConfigChange("rewardInclusionRule", updatedRule)
+    },
+    [onConfigChange],
+  )
 
-  const handleRewardExclusionRulesChange = (updatedRules: ExclusionRule[]) => {
-    onConfigChange("rewardExclusionRules", updatedRules)
-  }
+  const handleRewardExclusionRulesChange = useCallback(
+    (updatedRules: ExclusionRule[]) => {
+      onConfigChange("rewardExclusionRules", updatedRules)
+    },
+    [onConfigChange],
+  )
 
   return (
     <div className="space-y-4">
@@ -44,7 +73,7 @@ export function FixedPriceReward({ rule, onConfigChange }: FixedPriceRewardProps
             type="number"
             className="border border-gray-300 rounded pl-8 pr-3 py-2 text-sm w-32"
             value={price}
-            onChange={(e) => onConfigChange("price", parseFloat(e.target.value))}
+            onChange={(e) => onConfigChange("price", Number.parseFloat(e.target.value))}
           />
         </div>
         <span className="text-sm">for</span>
@@ -59,12 +88,7 @@ export function FixedPriceReward({ rule, onConfigChange }: FixedPriceRewardProps
           >
             <MinusCircle className={`cursor-pointer w-4 h-4 ${quantity <= 1 ? "text-gray-300" : "text-blue-600"}`} />
           </button>
-          <input
-            type="text"
-            className="w-8 text-center border-0 focus:ring-0"
-            value={quantity}
-            readOnly
-          />
+          <input type="text" className="w-8 text-center border-0 focus:ring-0" value={quantity} readOnly />
           <button
             type="button"
             onClick={() => handleQuantityChange(true)}
@@ -76,19 +100,18 @@ export function FixedPriceReward({ rule, onConfigChange }: FixedPriceRewardProps
         <span className="text-sm">products</span>
       </div>
 
-      {/* Apply To */}
+      {/* Per Cart Option */}
       <div className="flex items-center gap-2">
         <div className="w-2 h-2 bg-yellow-500 rounded-full" />
-        <span className="text-sm">Applied to the</span>
+        <span className="text-sm">Apply</span>
         <div className="relative">
           <select
             className="appearance-none border border-gray-300 rounded px-3 py-2 pr-8 text-sm bg-white w-40"
-            value={applyTo}
-            onChange={(e) => onConfigChange("applyTo", e.target.value)}
+            value={perCart}
+            onChange={(e) => onConfigChange("perCart", e.target.value)}
           >
-            <option value="Least expensive">Least expensive</option>
-            <option value="Most expensive">Most expensive</option>
-            <option value="All qualifying">All qualifying</option>
+            <option value="once">Once</option>
+            <option value="unlimited">Unlimited</option>
           </select>
           <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
             <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
@@ -96,7 +119,73 @@ export function FixedPriceReward({ rule, onConfigChange }: FixedPriceRewardProps
             </svg>
           </div>
         </div>
-        <span className="text-sm">products in the cart</span>
+        <span className="text-sm">per cart</span>
+      </div>
+
+      {/* Applied On */}
+      <div className="flex items-center gap-2">
+        <div className="w-2 h-2 bg-yellow-500 rounded-full" />
+        <span className="text-sm">Applied on</span>
+        <div className="relative">
+          <select
+            className="appearance-none border border-gray-300 rounded px-3 py-2 pr-8 text-sm bg-white w-32"
+            value={appliedOn}
+            onChange={(e) => onConfigChange("appliedOn", e.target.value)}
+          >
+            <option value="all">All</option>
+            <option value="up_to">Up to</option>
+          </select>
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+            <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+              <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+            </svg>
+          </div>
+        </div>
+
+        {appliedOn === "up_to" && (
+          <>
+            <div className="flex items-center border border-gray-300 rounded">
+              <button
+                type="button"
+                onClick={() => handleQuantityChange(false)}
+                disabled={quantity <= 1}
+                className={`px-2 py-1 ${
+                  quantity <= 1 ? "text-gray-300 cursor-not-allowed" : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                <MinusCircle className={`w-4 h-4 ${quantity <= 1 ? "text-gray-300" : "text-blue-600"}`} />
+              </button>
+              <input type="text" className="w-8 text-center border-0 focus:ring-0" value={quantity} readOnly />
+              <button
+                type="button"
+                onClick={() => handleQuantityChange(true)}
+                className="px-2 py-1 text-gray-500 hover:text-gray-700"
+              >
+                <PlusCircle className="w-4 h-4 text-blue-600" />
+              </button>
+            </div>
+
+            <span className="text-sm">Of the</span>
+            <div className="relative">
+              <select
+                className="appearance-none border border-gray-300 rounded px-3 py-2 pr-8 text-sm bg-white w-40"
+                value={applyTo}
+                onChange={(e) => onConfigChange("applyTo", e.target.value)}
+              >
+                <option value="Least expensive">Least expensive</option>
+                <option value="Most expensive">Most expensive</option>
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                  <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                </svg>
+              </div>
+            </div>
+            <span className="text-sm">products in the cart</span>
+          </>
+        )}
+
+        {appliedOn === "all" && <span className="text-sm">products</span>}
       </div>
 
       {/* Include Options */}
@@ -128,19 +217,28 @@ export function FixedPriceReward({ rule, onConfigChange }: FixedPriceRewardProps
       </div>
 
       {/* Product Inclusion Rule for Reward */}
-      {/* <div className="flex items-center gap-2">
-        <div className="w-2 h-2 bg-yellow-500 rounded-full" />
-        <span className="text-sm">Including products</span>
-      </div> */}
-      {rewardInclusionRule && (
-        <ProductInclusionRule rule={rewardInclusionRule} onRuleChange={handleRewardInclusionRuleChange} />
-      )}
+      <div className="mt-6 border-t pt-4">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+          <span className="text-sm font-medium">Apply fixed price to these products:</span>
+        </div>
+        <ProductInclusionRule
+          rule={rule.config.rewardInclusionRule || { id: `inclusion-${Date.now()}`, type: "all", value: "" }}
+          onRuleChange={handleRewardInclusionRuleChange}
+        />
+      </div>
 
       {/* Product Exclusion Rules for Reward */}
-      <ProductExclusionRule
-        rules={rewardExclusionRules}
-        onRulesChange={handleRewardExclusionRulesChange}
-      />
+      <div className="mt-4">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+          <span className="text-sm font-medium">Exclude these products from fixed price:</span>
+        </div>
+        <ProductExclusionRule
+          rules={rule.config.rewardExclusionRules || []}
+          onRulesChange={handleRewardExclusionRulesChange}
+        />
+      </div>
     </div>
   )
 }
