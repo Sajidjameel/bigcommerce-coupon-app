@@ -3,6 +3,7 @@
 import type React from "react"
 import { createContext, useContext, useState, useEffect } from "react"
 import type { Rule, Zone } from "@/types/rule-types"
+import { ifError } from "assert"
 
 // Types for shipping destinations
 interface Country {
@@ -439,7 +440,7 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
   }
 
   // Helper function to extract IDs from objects
-  const extractIds = (items: Array<{ id: number; name: string }>): number[] => {
+ const extractIds = (items: Array<{ id: number; name: string }>): number[] => {
     return items.map((item) => item.id)
   }
 
@@ -546,9 +547,7 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
       const products = parseIds(inclusionRule.value)
       if (products.length > 0) {
         result.products = extractIds(products)
-      } else {
-        result.products = [1] // Default to a valid product if empty
-      }
+      } 
     } else if (inclusionRule.type === "category") {
       // Handle categories from selectedItems first (from the category selector)
       if (
@@ -563,29 +562,30 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
         const categoryIds = parseCategoryJson(inclusionRule.value)
         if (categoryIds.length > 0) {
           result.categories = categoryIds
-        } else {
-          result.categories = [1] // Default to a valid category if empty
         }
-      } else {
-        result.categories = [1] // Default to a valid category if empty
       }
     } else if (inclusionRule.type === "brand" && inclusionRule.value) {
       const brands = parseIds(inclusionRule.value)
       if (brands.length > 0) {
         result.brands = extractIds(brands)
-      } else {
-        result.brands = [1] // Default to a valid brand if empty
+      } 
+    }
+       else if (inclusionRule.type === "custom_field" && inclusionRule.name && inclusionRule.values) {
+      result.product_custom_field = {
+        name: result.product_custom_field.name,
+        values: result.product_custom.values
+      }
+    } else if (inclusionRule.type === "product_option" && inclusionRule.name && inclusionRule.values) {
+      result.product_option = {
+        type: result.product_option.optionType || "string_match",
+        name: result.product_option.name,
+        values: result.product_option.values
       }
 
      
 
-
     } else if (inclusionRule.type === "all") {
-      // For "all products", we need at least one product to satisfy the API
-      result.products = [1]
-    } else {
-      // Default case to avoid empty items
-      result.products = [1]
+      return null
     }
 
     // Process additionalConditions if they exist
@@ -597,7 +597,7 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
       // Create an AND condition if we have both main condition and additional conditions
       if (Object.keys(result).length > 0) {
         const andConditions = [{ ...result }]
-
+      
         // Process each additional condition
         for (const condition of inclusionRule.additionalConditions) {
           const additionalResult: any = {}
@@ -606,31 +606,31 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
             const products = parseIds(condition.value)
             if (products.length > 0) {
               additionalResult.products = extractIds(products)
-            } else {
-              additionalResult.products = [1] // Default to a valid product if empty
-            }
+            } 
           } else if (condition.type === "category") {
             // Try to parse category value
             if (condition.value) {
               const categoryIds = parseCategoryJson(condition.value)
               if (categoryIds.length > 0) {
                 additionalResult.categories = categoryIds
-              } else {
-                additionalResult.categories = [1] // Default to a valid category if empty
-              }
-            } else {
-              additionalResult.categories = [1] // Default to a valid category if empty
+              } 
             }
           } else if (condition.type === "brand" && condition.value) {
             const brands = parseIds(condition.value)
             if (brands.length > 0) {
               additionalResult.brands = extractIds(brands)
-            } else {
-              additionalResult.brands = [1] // Default to a valid brand if empty
             }
-          } else {
-            // Default case to avoid empty items
-            additionalResult.products = [1]
+          }else if (condition.type === "custom_field" && condition.name && condition.values) {
+            additionalResult.product_custom_field = {
+              name: condition.name,
+              values: condition.values
+            }
+          } else if (condition.type === "product_option" && condition.name && condition.values) {
+            additionalResult.product_option = {
+              type: condition.optionType || "string_match",
+              name: condition.name,
+              values: condition.values
+            }
           }
 
           if (Object.keys(additionalResult).length > 0) {
@@ -642,44 +642,59 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
         if (andConditions.length > 1) {
           return { and: andConditions }
         }
-      } else {
-        // If we don't have a main condition, just process the first additional condition
-        const condition = inclusionRule.additionalConditions[0]
-        if (condition.type === "individual" && condition.value) {
-          const products = parseIds(condition.value)
-          if (products.length > 0) {
-            result.products = extractIds(products)
-          } else {
-            result.products = [1] // Default to a valid product if empty
-          }
-        } else if (condition.type === "category") {
-          // Try to parse category value
-          if (condition.value) {
-            const categoryIds = parseCategoryJson(condition.value)
-            if (categoryIds.length > 0) {
-              result.categories = categoryIds
-            } else {
-              result.categories = [1] // Default to a valid category if empty
-            }
-          } else {
-            result.categories = [1] // Default to a valid category if empty
-          }
-        } else if (condition.type === "brand" && condition.value) {
-          const brands = parseIds(condition.value)
-          if (brands.length > 0) {
-            result.brands = extractIds(brands)
-          } else {
-            result.brands = [1] // Default to a valid brand if empty
-          }
-        } else {
-          // Default case to avoid empty items
-          result.products = [1]
-        }
+    //   } else {
+    //     // If we don't have a main condition, just process the first additional condition
+    //     const condition = inclusionRule.additionalConditions[0]
+    //     if (condition.type === "individual" && condition.value) {
+    //       const products = parseIds(condition.value)
+    //       if (products.length > 0) {
+    //         result.products = extractIds(products)
+    //       } else {
+    //         result.products = [1] // Default to a valid product if empty
+    //       }
+    //     } else if (condition.type === "category") {
+    //       // Try to parse category value
+    //       if (condition.value) {
+    //         const categoryIds = parseCategoryJson(condition.value)
+    //         if (categoryIds.length > 0) {
+    //           result.categories = categoryIds
+    //         } else {
+    //           result.categories = [1] // Default to a valid category if empty
+    //         }
+    //       } else {
+    //         result.categories = [1] // Default to a valid category if empty
+    //       }
+    //     } else if (condition.type === "brand" && condition.value) {
+    //       const brands = parseIds(condition.value)
+    //       if (brands.length > 0) {
+    //         result.brands = extractIds(brands)
+    //       } else {
+    //         result.brands = [1] // Default to a valid brand if empty
+    //       }
+    //        } else if (condition.type === "custom_field" && condition.name && condition.values) {
+    //       result.product_custom_field = {
+    //         name: condition.name,
+    //         values: condition.values
+    //       }
+    //     } else if (condition.type === "product_option" && condition.name && condition.values) {
+    //       result.product_option = {
+    //         type: condition.optionType || "string_match",
+    //         name: condition.name,
+    //         values: condition.values
+    //       }
+    //     } else {
+    //       // Default case to avoid empty items
+    //       result.products = [1]
+    //     }
+    //   }
+    // }
       }
     }
+     // Process custom fields (matches your example payload structure)
+   
 
-    return Object.keys(result).length > 0 ? result : { products: [1] } // Ensure we always return a valid structure
-  }
+    return Object.keys(result).length > 0 ? result : null;
+};
 
   // Process exclusion rules
   const processExclusionRules = (exclusionRules: any[]) => {
@@ -726,6 +741,17 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
         const brands = parseIds(exclusion.value)
         if (brands.length > 0) {
           condition.brands = extractIds(brands)
+        }
+         } else if (exclusion.type === "custom_field" && exclusion.name && exclusion.values) {
+        condition.product_custom_field = {
+          name: exclusion.name,
+          values: exclusion.values
+        }
+      } else if (exclusion.type === "product_option" && exclusion.name && exclusion.values) {
+        condition.product_option = {
+          type: exclusion.optionType || "string_match",
+          name: exclusion.name,
+          values: exclusion.values
         }
       }
 
@@ -1016,6 +1042,42 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
           // No inclusion or exclusion rules, add a default product
           apiRule.action.cart_items.items.products = [1]
         }
+ if (rule.config?.customFields) {
+          if (!apiRule.action.cart_items.items.and) {
+            apiRule.action.cart_items.items.and = []
+          }
+
+          rule.config.customFields.forEach((field: any) => {
+            apiRule.action.cart_items.items.and.push({
+              product_custom_field: {
+                name: field.name,
+                values: field.values,
+              },
+            })
+          })
+        }
+
+        // Handle product options for discount_products if they exist
+        if (rule.config?.productOptions) {
+          if (!apiRule.action.cart_items.items.and) {
+            apiRule.action.cart_items.items.and = []
+          }
+
+          rule.config.productOptions.forEach((option: any) => {
+            apiRule.action.cart_items.items.and.push({
+              product_option: {
+                name: option.name,
+                values: option.values,
+                type: option.type || 'string_match',
+              },
+            })
+          })
+        }
+
+
+
+
+
       } else if (rule.reward === 'free_shipping') {
         // Free shipping reward
         apiRule.action.shipping = {
@@ -1119,7 +1181,7 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
         }
 
         // Handle custom fields if they exist
-        if (rule.config?.customFields) {
+       if (rule.config?.customFields) {
           if (!apiRule.action.fixed_price_set.items.and) {
             apiRule.action.fixed_price_set.items.and = []
           }
@@ -1133,6 +1195,7 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
             })
           })
         }
+
 
         // Handle product options if they exist
         if (rule.config?.productOptions) {
