@@ -59,77 +59,126 @@ export async function POST(req: Request): Promise<NextResponse> {
     // Create properly formatted rules with both condition and action
     const formattedRules = Array.isArray(body.rules)
       ? body.rules.map((rule: any, index: number) => {
-          // Process the rule to ensure no default product IDs are used
-          if (rule.condition?.cart?.items?.products) {
-            // Remove default product ID 1 if it exists
-            rule.condition.cart.items.products = rule.condition.cart.items.products.filter((id: number) => id !== 1)
+        // Process the rule to ensure no default product IDs are used
+        if (rule.condition?.cart?.items?.products) {
+          // Remove default product ID 1 if it exists
+          rule.condition.cart.items.products = rule.condition.cart.items.products.filter((id: number) => id !== 1)
 
-            // If no products are left, use a different approach
-            if (rule.condition.cart.items.products.length === 0) {
-              // Use a minimum subtotal condition instead
-              rule.condition.cart.subtotal = { min_amount: 0 }
-              delete rule.condition.cart.items.products
+          // If no products are left, use a different approach
+          if (rule.condition.cart.items.products.length === 0) {
+            // Use a minimum subtotal condition instead
+            rule.condition.cart.subtotal = { min_amount: 0 }
+            delete rule.condition.cart.items.products
+          }
+        }
+         if (rule.config?.customFields) {
+          rule.config.customFields.forEach((field: any) => {
+            if (field.name && field.values) {
+              rule.condition.push({
+                product_custom_field: {
+                  name: field.name.trim(),
+                  values: Array.isArray(field.values) ? field.values : [field.values]
+                }
+              });
+            }
+          });
+        }
+
+        // Process product options if they exist
+        if (rule.config?.productOptions) {
+          rule.config.productOptions.forEach((option: any) => {
+            if (option.name && option.values) {
+              rule.condition.push({
+                product_option: {
+                  type: option.type || "string_match",
+                  name: option.name.trim(),
+                  values: Array.isArray(option.values) ? option.values : [option.values]
+                }
+              });
+            }
+          });
+        }
+
+
+
+
+
+
+
+        // Process fixed_price_set action to ensure no default product IDs
+        if (rule.action?.fixed_price_set?.items?.products) {
+          rule.action.fixed_price_set.items.products = rule.action.fixed_price_set.items.products.filter(
+            (id: number) => id !== 1,
+          )
+
+          // If no products are left and there's no other condition, use a different approach
+          if (rule.action.fixed_price_set.items.products.length === 0 && !rule.action.fixed_price_set.items.and) {
+            // If we have inclusion rules in the UI, make sure they're properly formatted
+            if (rule.config?.rewardInclusionRule?.type === "all") {
+              // For "all products", don't specify products
+              delete rule.action.fixed_price_set.items.products
             }
           }
+        }
 
-          // Process fixed_price_set action to ensure no default product IDs
-          if (rule.action?.fixed_price_set?.items?.products) {
-            rule.action.fixed_price_set.items.products = rule.action.fixed_price_set.items.products.filter(
-              (id: number) => id !== 1,
-            )
+        // Process cart_items action to ensure no default product IDs
+        if (rule.action?.cart_items?.items?.products) {
+          rule.action.cart_items.items.products = rule.action.cart_items.items.products.filter(
+            (id: number) => id !== 1,
+          )
 
-            // If no products are left and there's no other condition, use a different approach
-            if (rule.action.fixed_price_set.items.products.length === 0 && !rule.action.fixed_price_set.items.and) {
-              // If we have inclusion rules in the UI, make sure they're properly formatted
-              if (rule.config?.rewardInclusionRule?.type === "all") {
-                // For "all products", don't specify products
-                delete rule.action.fixed_price_set.items.products
-              }
+
+
+
+          
+          // If no products are left and there's no other condition, use a different approach
+          if (rule.action.cart_items.items.products.length === 0 && !rule.action.cart_items.items.and) {
+            // If we have inclusion rules in the UI, make sure they're properly formatted
+            if (rule.config?.rewardInclusionRule?.type === "all") {
+              // For "all products", don't specify products
+              delete rule.action.cart_items.items.products
             }
           }
+        }
 
-          // Process cart_items action to ensure no default product IDs
-          if (rule.action?.cart_items?.items?.products) {
-            rule.action.cart_items.items.products = rule.action.cart_items.items.products.filter(
-              (id: number) => id !== 1,
-            )
-
-            // If no products are left and there's no other condition, use a different approach
-            if (rule.action.cart_items.items.products.length === 0 && !rule.action.cart_items.items.and) {
-              // If we have inclusion rules in the UI, make sure they're properly formatted
-              if (rule.config?.rewardInclusionRule?.type === "all") {
-                // For "all products", don't specify products
-                delete rule.action.cart_items.items.products
-              }
+        // For fixed price rewards, ensure we're using the right format
+        if (rule.reward === "fixed_price" && rule.config) {
+          // Make sure we have the fixed_price_set action
+          if (!rule.action.fixed_price_set) {
+            rule.action.fixed_price_set = {
+              fixed_price: String(rule.config.price || 0),
+              quantity: rule.config.quantity || 1,
+              strategy: (rule.config.applyTo || "Least expensive").toUpperCase().replace(" ", "_"),
+              exclude_items_on_sale: !(rule.config.includeOnSale || false),
+              include_items_considered_by_condition: rule.config.includeConditionProducts || false,
+              items: rule.action.fixed_price_set?.items || {},
             }
           }
+        }
+        let cleanAction = rule.action;
+        if (Array.isArray(cleanAction)) {
+          cleanAction = cleanAction[0];
+        }
 
-          // For fixed price rewards, ensure we're using the right format
-          if (rule.reward === "fixed_price" && rule.config) {
-            // Make sure we have the fixed_price_set action
-            if (!rule.action.fixed_price_set) {
-              rule.action.fixed_price_set = {
-                fixed_price: String(rule.config.price || 0),
-                quantity: rule.config.quantity || 1,
-                strategy: (rule.config.applyTo || "Least expensive").toUpperCase().replace(" ", "_"),
-                exclude_items_on_sale: !(rule.config.includeOnSale || false),
-                include_items_considered_by_condition: rule.config.includeConditionProducts || false,
-                items: rule.action.fixed_price_set?.items || {},
-              }
+        if (cleanAction?.cart?.discount) {
+          cleanAction = {
+            cart_value: {
+              discount: cleanAction.cart.discount
             }
-          }
+          };
+        } 
 
-          return {
-            id: rule.id,
-            name: rule.name,
-            condition: rule.condition,
-            type: rule.type || body.ruleType || "custom",
-            apply_once: rule.apply_once ?? true,
-            stop: rule.stop ?? true,
-            conditions: rule.conditions || (rule.condition ? [rule.condition] : []),
-            action: rule.action || (rule.action ? [rule.action] : []),
-          }
-        })
+        return {
+          id: rule.id,
+          name: rule.name,
+          condition: rule.condition,
+          type: rule.type || body.ruleType || "custom_Rule",
+          apply_once: rule.apply_once ?? true,
+          stop: rule.stop ?? false,
+          conditions: rule.conditions || rule.condition,
+          action: cleanAction || {}
+        }
+      })
       : []
 
     console.log("shipping_address", body.shipping_address)
@@ -155,12 +204,12 @@ export async function POST(req: Request): Promise<NextResponse> {
         },
         rules: formattedRules,
         condition: body.rules.condition,
-        currency_code: "*",
+        currency_code: body.currency_code || body.currency,
         redemption_type: "COUPON",
         shipping_address: body.shipping_address
           ? {
-              countries: body.shipping_address.countries.map((c: any) => c.iso2_country_code),
-            }
+            countries: body.shipping_address.countries.map((c: any) => c.iso2_country_code),
+          }
           : null,
         current_uses: body.current_uses || 0,
         max_uses: body.max_uses,
@@ -224,7 +273,7 @@ export async function POST(req: Request): Promise<NextResponse> {
       channels: body.channels && body.channels.length > 0 ? body.channels : [],
       coupon_overrides_automatic_when_offering_higher_discounts: false,
       created_from: "react_ui",
-      currency_code: "*",
+      currency_code: body.currency_code,
       current_uses: 0,
       customer: {
         group_ids: [],

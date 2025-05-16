@@ -10,7 +10,7 @@ export type Rule = {
     includeOnSale?: boolean
     includeConditionProducts?: boolean
     productType?: string
-    selectedProducts?: string[]
+  selectedProducts?: (string | { id: number; name: string })[]
     minimumSpend?: number
     giftQuantity?: number
     giftProduct?: string | { id: number; name: string }
@@ -33,7 +33,9 @@ export type Rule = {
     // Separate inclusion/exclusion rules for the reward
     rewardInclusionRule?: InclusionRule
     rewardExclusionRules?: ExclusionRule[]
+    
     // Additional properties
+   
    perCart?: string
     stop?: boolean
      fixedPrice?: number
@@ -97,12 +99,12 @@ export interface Pagination {
   total: number
   count: number
 }
-
 export interface InclusionRule {
   id: string
   type: string
   value: string
   selector?: string
+   name?: string
   additionalConditions?: {
     id: string
     type: string
@@ -124,6 +126,7 @@ export type ExclusionRule = {
   type: string // "individual", "category", "brand", "custom_field", "product_option"
   value?: string
   selector?: string
+   name?: string
   selectedItems?: Array<{ id: number; name: string }>
 }
 

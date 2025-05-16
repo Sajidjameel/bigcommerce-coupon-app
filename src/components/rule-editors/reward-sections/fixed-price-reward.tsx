@@ -218,10 +218,10 @@ export function FixedPriceReward({ rule, onConfigChange }: FixedPriceRewardProps
 
       {/* Product Inclusion Rule for Reward */}
       <div className="mt-6 border-t pt-4">
-        <div className="flex items-center gap-2 mb-2">
+        {/* <div className="flex items-center gap-2 mb-2">
           <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
           <span className="text-sm font-medium">Apply fixed price to these products:</span>
-        </div>
+        </div> */}
         <ProductInclusionRule
           rule={rule.config.rewardInclusionRule || { id: `inclusion-${Date.now()}`, type: "all", value: "" }}
           onRuleChange={handleRewardInclusionRuleChange}
@@ -230,10 +230,10 @@ export function FixedPriceReward({ rule, onConfigChange }: FixedPriceRewardProps
 
       {/* Product Exclusion Rules for Reward */}
       <div className="mt-4">
-        <div className="flex items-center gap-2 mb-2">
+        {/* <div className="flex items-center gap-2 mb-2">
           <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
           <span className="text-sm font-medium">Exclude these products from fixed price:</span>
-        </div>
+        </div> */}
         <ProductExclusionRule
           rules={rule.config.rewardExclusionRules || []}
           onRulesChange={handleRewardExclusionRulesChange}
