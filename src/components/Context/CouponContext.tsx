@@ -569,6 +569,7 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
         result.brands = extractIds(brands)
       }
     } else if (inclusionRule.type === "custom_field") {
+       console.log("Custom Field Rule Input:", inclusionRule);
       if (inclusionRule.name && inclusionRule.values) {
         result.product_custom_field = {
           name: inclusionRule.name.trim(),
@@ -578,15 +579,16 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
         };
       }
     } else if (inclusionRule.type === "product_option") {
-        if (inclusionRule.name && inclusionRule.values) {
-            result.product_option = {
-                type: "string_match",
-                name: inclusionRule.name.trim(),
-                values: Array.isArray(inclusionRule.values) 
-                    ? inclusionRule.values 
-                    : [inclusionRule.values],
-            };
-        }
+      console.log("product option Field Rule Input:", inclusionRule);
+      if (inclusionRule.name && inclusionRule.values) {
+        result.product_option = {
+          type: inclusionRule.optionType || "string_match",
+          name: inclusionRule.name.trim(),
+          values: Array.isArray(inclusionRule.values)
+            ? inclusionRule.values
+            : [inclusionRule.values],
+        };
+      }
     } else if (inclusionRule.type === "all") {
       return null
     }
@@ -626,16 +628,19 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
           } else if (condition.type === "custom_field" && condition.name && condition.values) {
             additionalResult.product_custom_field = {
               name: condition.name.trim(),
-              values: Array.isArray(condition.values) ? condition.values : [condition.values],
-            }
+              values: Array.isArray(condition.values)
+                ? condition.values
+                : [condition.values],
+            };
           } else if (condition.type === "product_option" && condition.name && condition.values) {
             additionalResult.product_option = {
-              type: "string_match",
+              type: condition.optionType || "string_match",
               name: condition.name.trim(),
-              values: Array.isArray(condition.values) ? condition.values : [condition.values],
-            }
+              values: Array.isArray(condition.values)
+                ? condition.values
+                : [condition.values],
+            };
           }
-
           if (Object.keys(additionalResult).length > 0) {
             andConditions.push(additionalResult)
           }
@@ -643,57 +648,12 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
 
         // If we have multiple conditions, return them as an AND
         if (andConditions.length > 1) {
-          return { and: andConditions }
+          return { and: andConditions };
+        } else if (andConditions.length === 1) {
+          return andConditions[0];
         }
-        //   } else {
-        //     // If we don't have a main condition, just process the first additional condition
-        //     const condition = inclusionRule.additionalConditions[0]
-        //     if (condition.type === "individual" && condition.value) {
-        //       const products = parseIds(condition.value)
-        //       if (products.length > 0) {
-        //         result.products = extractIds(products)
-        //       } else {
-        //         result.products = [1] // Default to a valid product if empty
-        //       }
-        //     } else if (condition.type === "category") {
-        //       // Try to parse category value
-        //       if (condition.value) {
-        //         const categoryIds = parseCategoryJson(condition.value)
-        //         if (categoryIds.length > 0) {
-        //           result.categories = categoryIds
-        //         } else {
-        //           result.categories = [1] // Default to a valid category if empty
-        //         }
-        //       } else {
-        //         result.categories = [1] // Default to a valid category if empty
-        //       }
-        //     } else if (condition.type === "brand" && condition.value) {
-        //       const brands = parseIds(condition.value)
-        //       if (brands.length > 0) {
-        //         result.brands = extractIds(brands)
-        //       } else {
-        //         result.brands = [1] // Default to a valid brand if empty
-        //       }
-        //        } else if (condition.type === "custom_field" && condition.name && condition.values) {
-        //       result.product_custom_field = {
-        //         name: condition.name,
-        //         values: condition.values
-        //       }
-        //     } else if (condition.type === "product_option" && condition.name && condition.values) {
-        //       result.product_option = {
-        //         type: condition.optionType || "string_match",
-        //         name: condition.name,
-        //         values: condition.values
-        //       }
-        //     } else {
-        //       // Default case to avoid empty items
-        //       result.products = [1]
-        //     }
-        //   }
-        // }
       }
     }
-    // Process custom fields (matches your example payload structure)
 
     return Object.keys(result).length > 0 ? result : null
   }
@@ -746,15 +706,19 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
         }
       } else if (exclusion.type === "custom_field" && exclusion.name && exclusion.values) {
         condition.product_custom_field = {
-          name: exclusion.name,
-          values: Array.isArray(exclusion.values) ? exclusion.values : [exclusion.values],
-        }
+          name: exclusion.name.trim(),
+          values: Array.isArray(exclusion.values)
+            ? exclusion.values
+            : [exclusion.values],
+        };
       } else if (exclusion.type === "product_option" && exclusion.name && exclusion.values) {
         condition.product_option = {
-          type: "string_match",
-          name: exclusion.name,
-          values: Array.isArray(exclusion.values) ? exclusion.values : [exclusion.values],
-        }
+          type: exclusion.optionType || "string_match",
+          name: exclusion.name.trim(),
+          values: Array.isArray(exclusion.values)
+            ? exclusion.values
+            : [exclusion.values],
+        };
       }
 
       if (Object.keys(condition).length > 0) {
@@ -765,14 +729,17 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
     if (exclusionConditions.length === 0) {
       return null
     }
+    if (exclusionConditions.length === 1) return exclusionConditions[0];
+
+    return { and: exclusionConditions };
 
     // For multiple exclusion conditions, combine with AND
-    if (exclusionConditions.length > 1) {
-      return { and: exclusionConditions }
-    }
+    // if (exclusionConditions.length > 1) {
+    //   return { and: exclusionConditions }
+    // }
 
-    // For single exclusion condition, return it directly
-    return exclusionConditions[0]
+    // // For single exclusion condition, return it directly
+    // return exclusionConditions[0]
   }
 
   // Create complex condition for rule
@@ -920,7 +887,7 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
           const apiRule: any = {
             apply_once: rule.apply_once !== undefined ? rule.apply_once : true,
             stop: rule.stop !== undefined ? rule.stop : false,
-            condition: {},
+            //condition: {},
             action: {}, // Make sure action is an object, not an array
           }
 
@@ -1185,27 +1152,34 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
 
             // Process product_custom_field
             if (condition.product_custom_field) {
-              const customField = condition.product_custom_field
+              const customField = condition.product_custom_field;
               if (!Array.isArray(customField.values)) {
-                customField.values = [customField.values]
+                customField.values = [customField.values];
               }
               if (customField.name && typeof customField.name === "object") {
-                customField.name = customField.name.name || customField.name.id
+                customField.name = customField.name.name || customField.name.id;
               }
+              // Ensure it matches the exact structure from example
+              condition.product_custom_field = {
+                name: customField.name.trim(),
+                values: customField.values.map((v: any) => String(v).trim())
+              };
             }
 
             // Process product_option
             if (condition.product_option) {
-              const productOption = condition.product_option
+              const productOption = condition.product_option;
               if (!Array.isArray(productOption.values)) {
-                productOption.values = [productOption.values]
+                productOption.values = [productOption.values];
               }
               if (productOption.name && typeof productOption.name === "object") {
-                productOption.name = productOption.name.name || productOption.name.id
+                productOption.name = productOption.name.name || productOption.name.id;
               }
-              if (!productOption.type) {
-                productOption.type = "string_match"
-              }
+              condition.product_option = {
+                type: productOption.type || "string_match",
+                name: String(productOption.name).trim(),
+                values: productOption.values.map((v: any) => String(v).trim())
+              };
             }
 
             // Process nested conditions

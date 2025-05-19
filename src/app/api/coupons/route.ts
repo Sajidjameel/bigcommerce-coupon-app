@@ -59,50 +59,57 @@ export async function POST(req: Request): Promise<NextResponse> {
     // Create properly formatted rules with both condition and action
     const formattedRules = Array.isArray(body.rules)
       ? body.rules.map((rule: any, index: number) => {
-        // Process the rule to ensure no default product IDs are used
         if (rule.condition?.cart?.items?.products) {
-          // Remove default product ID 1 if it exists
           rule.condition.cart.items.products = rule.condition.cart.items.products.filter((id: number) => id !== 1)
 
-          // If no products are left, use a different approach
           if (rule.condition.cart.items.products.length === 0) {
-            // Use a minimum subtotal condition instead
             rule.condition.cart.subtotal = { min_amount: 0 }
             delete rule.condition.cart.items.products
           }
         }
-         if (rule.config?.customFields) {
-          rule.config.customFields.forEach((field: any) => {
-            if (field.name && field.values) {
-              rule.condition.push({
-                product_custom_field: {
-                  name: field.name.trim(),
-                  values: Array.isArray(field.values) ? field.values : [field.values]
-                }
-              });
-            }
-          });
+       if (rule.config?.customFields) {
+        rule.condition = rule.condition || {};
+        rule.condition.cart = rule.condition.cart || {};
+        rule.condition.cart.items = rule.condition.cart.items || {};
+        
+        if (!rule.condition.cart.items.and) {
+          rule.condition.cart.items.and = [];
         }
+        
+        rule.config.customFields.forEach((field: any) => {
+          if (field.name && field.values) {
+            rule.condition.cart.items.and.push({
+              product_custom_field: {
+                name: field.name.trim(),
+                values: Array.isArray(field.values) ? field.values : [field.values]
+              }
+            });
+          }
+        });
+      }
 
-        // Process product options if they exist
-        if (rule.config?.productOptions) {
-          rule.config.productOptions.forEach((option: any) => {
-            if (option.name && option.values) {
-              rule.condition.push({
-                product_option: {
-                  type: option.type || "string_match",
-                  name: option.name.trim(),
-                  values: Array.isArray(option.values) ? option.values : [option.values]
-                }
-              });
-            }
-          });
+      // Process product options
+      if (rule.config?.productOptions) {
+        rule.condition = rule.condition || {};
+        rule.condition.cart = rule.condition.cart || {};
+        rule.condition.cart.items = rule.condition.cart.items || {};
+        
+        if (!rule.condition.cart.items.and) {
+          rule.condition.cart.items.and = [];
         }
-
-
-
-
-
+        
+        rule.config.productOptions.forEach((option: any) => {
+          if (option.name && option.values) {
+            rule.condition.cart.items.and.push({
+              product_option: {
+                type: option.type || "string_match",
+                name: option.name.trim(),
+                values: Array.isArray(option.values) ? option.values : [option.values]
+              }
+            });
+          }
+        });
+      }
 
 
         // Process fixed_price_set action to ensure no default product IDs
@@ -186,6 +193,11 @@ export async function POST(req: Request): Promise<NextResponse> {
 
     for (let i = 0; i < quantity; i++) {
       const code = await generateUniqueCode()
+
+
+
+
+      
 
       const startDate = body.start_date || null
       const endDate = body.end_date || null
