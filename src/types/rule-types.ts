@@ -10,7 +10,7 @@ export type Rule = {
     includeOnSale?: boolean
     includeConditionProducts?: boolean
     productType?: string
-  selectedProducts?: (string | { id: number; name: string })[]
+    selectedProducts?: (string | { id: number; name: string })[]
     minimumSpend?: number
     giftQuantity?: number
     giftProduct?: string | { id: number; name: string }

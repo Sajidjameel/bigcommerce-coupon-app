@@ -194,7 +194,8 @@ export default function Rules() {
   }
 
   const handleRuleChange = (updatedRule: Rule): void => {
-    setCurrentRule(updatedRule)
+    console.log("Config Updated rule:", updatedRule)
+    setCurrentRule(prevState => ({...prevState, ...updatedRule}))
   }
 
   return (

@@ -222,6 +222,7 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
       .map((item) => {
         // For custom fields, store the field name and values in a special format
         if (inclusionRules[index].type === "custom_field" && "fieldName" in item && "fieldValues" in item) {
+          
           return JSON.stringify({
             fieldName: item.fieldName,
             fieldValues: item.fieldValues,

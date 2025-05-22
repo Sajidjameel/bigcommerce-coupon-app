@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useRef } from "react"
 import { Search, X } from "lucide-react"
+import { useCouponContext } from "@/components/Context/CouponContext"
 
 interface Country {
   id: number | string
   name: string
+  iso2_country_code: string
 }
 
 interface ShippingDestinationProps {
@@ -22,7 +24,8 @@ export default function ShippingDestination({
   initialSelectedCountries = [],
 }: ShippingDestinationProps) {
   const [countries, setCountries] = useState<Country[]>([])
-  const [selectedCountries, setSelectedCountries] = useState<Country[]>(initialSelectedCountries)
+  const { selectedCountries,setSelectedCountries} = useCouponContext()
+  // const [selectedCountries, setSelectedCountries] = useState<Country[]>(initialSelectedCountries)
   const [searchQuery, setSearchQuery] = useState("")
   const [loading, setLoading] = useState(true)
   const modalRef = useRef<HTMLDivElement>(null)
@@ -65,19 +68,28 @@ export default function ShippingDestination({
 
   const removeSelectedCountry = (countryId: number | string) => {
     setSelectedCountries(selectedCountries.filter((country) => country.id !== countryId))
+
   }
 
   const handleApply = () => {
+    console.log("✅ Applying countries:", selectedCountries);
+    const transformedCountries = selectedCountries.map(country => ({
+      id: country.id,
+      name: country.name,
+      iso2_country_code: country.name.substring(0, 2).toUpperCase()
+    }));
+    setSelectedCountries(transformedCountries)
+    console.log("Transformed countries:", transformedCountries);
     onApply(selectedCountries)
     onClose()
   }
 
   const filteredCountries = countries.filter((country) =>
-   country.name.toLowerCase().includes(searchQuery.toLowerCase()),
-  
-  
+    country.name.toLowerCase().includes(searchQuery.toLowerCase()),
+
+
   )
-   
+
 
   if (!isOpen) return null
 

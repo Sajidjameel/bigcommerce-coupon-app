@@ -259,6 +259,8 @@ export function ProductExclusionRule({ rules, onRulesChange }: ProductExclusionR
     try {
       if (rule.type === "custom_field") {
         const parsedValue = JSON.parse(rule.value);
+        console.log("Custom Field Selected:", parsedValue);
+
         if (parsedValue.fieldName && parsedValue.fieldValues) {
           return [
             {
@@ -268,9 +270,12 @@ export function ProductExclusionRule({ rules, onRulesChange }: ProductExclusionR
               fieldValues: parsedValue.fieldValues,
             },
           ];
+
         }
       } else if (rule.type === "product_option") {
         const parsedValue = JSON.parse(rule.value);
+          console.log("Custom Field Selected:", parsedValue);
+
         if (parsedValue.optionName && parsedValue.optionValues) {
           return [
             {

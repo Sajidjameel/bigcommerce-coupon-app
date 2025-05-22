@@ -1,13 +1,14 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useState, useEffect } from "react"
-import { CONDITION_OPTIONS, type Rule, type Zone } from "@/types/rule-types"
+import { createContext, useContext, useState, useEffect, SetStateAction, Dispatch } from "react"
+import type { Rule, Zone } from "@/types/rule-types"
 
 // Types for shipping destinations
 interface Country {
-  id: number | string
+  id: string | number
   name: string
+  iso2_country_code: string
 }
 
 // Types for targeting rules
@@ -215,6 +216,11 @@ export interface CouponFormData {
   // Rules
   rules: ExtendedRule[]
   rewardType: "tiered" | "stacked" | null
+  shipping_address: {
+    countries: {
+      iso2_country_code: string
+    }[]
+  } | null
 
   // Targeting
   targetingRules: TargetingRule[]
@@ -242,6 +248,7 @@ interface CouponContextProps {
   removeRule: (index: number) => void
   updateRule: (index: number, rule: Rule) => void
   setFormData: React.Dispatch<React.SetStateAction<CouponFormData>>
+  selectedZoneIds: Set<number>, setSelectedZoneIds: Dispatch<SetStateAction<Set<number>>>,
 
   // Additional methods for targeting
   addTargetingRule: () => void
@@ -249,6 +256,7 @@ interface CouponContextProps {
   updateTargetingRule: (id: string, updates: Partial<TargetingRule>) => void
 
   // Methods for shipping destinations
+  selectedCountries: Country[]
   setSelectedCountries: (countries: Country[]) => void
 
   // Methods for schedule
@@ -279,6 +287,8 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
   const [channels, setChannels] = useState<Channel[]>([])
   const [showChannelModal, setShowChannelModal] = useState(false)
   const [selectedChannelIds, setSelectedChannelIds] = useState<string[]>(["0"]) // Default to channel 1
+  const [selectedZoneIds, setSelectedZoneIds] = useState<Set<number>>(new Set())
+
 
   const [formData, setFormData] = useState<CouponFormData>({
     // Basic info
@@ -327,6 +337,7 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
     // Rules
     rules: [],
     rewardType: "stacked", // Default to stacked rewards
+    shipping_address: null, // Initialize as null to avoid empty items error
 
     // Targeting
     targetingRules: [],
@@ -389,7 +400,7 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
 
     setFormData((prev) => ({
       ...prev,
-      targetingRules: [...prev.targetingRules, newRule],
+      targetingRules: [...prev.targetingRules, newRule,],
     }))
   }
 
@@ -406,14 +417,30 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
       targetingRules: prev.targetingRules.map((rule) => (rule.id === id ? { ...rule, ...updates } : rule)),
     }))
   }
-
   // Methods for shipping destinations
   const setSelectedCountries = (countries: Country[]) => {
-    setFormData((prev) => ({
-      ...prev,
-      selectedCountries: countries,
-    }))
-  }
+    console.log("📦 Received countries from modal:", countries);
+
+    setFormData(prev => {
+      const shippingAddress = countries.length > 0
+        ? {
+          countries: countries.map(country => ({
+            iso2_country_code: country.name.substring(0, 2).toUpperCase()
+          }))
+        }
+        : null;
+
+      return {
+        ...prev,
+        shipping_address: shippingAddress,
+        selectedCountries: countries
+      };
+    });
+  };
+  useEffect(() => {
+    console.log("Updated countries:", formData.shipping_address?.countries)
+
+  }, [formData.shipping_address])
 
   // Methods for schedule
   const updateSchedule = (
@@ -549,11 +576,11 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
       }
     } else if (inclusionRule.type === "category") {
       if (inclusionRule.selectedItems?.length) {
-        result.categories = inclusionRule.selectedItems.map((item: any) => Number(item.id));
+        result.categories = inclusionRule.selectedItems.map((item: any) => Number(item.id))
       } else if (inclusionRule.value) {
-        const categoryIds = parseCategoryJson(inclusionRule.value);
+        const categoryIds = parseCategoryJson(inclusionRule.value)
         if (categoryIds.length > 0) {
-          result.categories = categoryIds;
+          result.categories = categoryIds
         }
       }
       // Also check value field as fallback
@@ -569,25 +596,61 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
         result.brands = extractIds(brands)
       }
     } else if (inclusionRule.type === "custom_field") {
-       console.log("Custom Field Rule Input:", inclusionRule);
-      if (inclusionRule.name && inclusionRule.values) {
-        result.product_custom_field = {
-          name: inclusionRule.name.trim(),
-          values: Array.isArray(inclusionRule.values)
-            ? inclusionRule.values
-            : [inclusionRule.values],
-        };
+      try {
+        let name = null
+        let values = null
+
+        if (inclusionRule.value) {
+          const parsed = JSON.parse(inclusionRule.value)
+          if (parsed.fieldName && parsed.fieldValues) {
+            name = parsed.fieldName.trim()
+            values = Array.isArray(parsed.fieldValues)
+              ? parsed.fieldValues.map((v: string) => v.trim())
+              : [parsed.fieldValues.trim()]
+          }
+        }
+
+        if (!name && inclusionRule.name && inclusionRule.values) {
+          name = inclusionRule.name.trim()
+          values = Array.isArray(inclusionRule.values)
+            ? inclusionRule.values.map((v: string) => v.trim())
+            : [inclusionRule.values.trim()]
+        }
+
+        if (name && values) {
+          result.product_custom_field = { name, values }
+        }
+      } catch (e) {
+        console.error("Error processing custom field rule:", e)
       }
     } else if (inclusionRule.type === "product_option") {
-      console.log("product option Field Rule Input:", inclusionRule);
-      if (inclusionRule.name && inclusionRule.values) {
-        result.product_option = {
-          type: inclusionRule.optionType || "string_match",
-          name: inclusionRule.name.trim(),
-          values: Array.isArray(inclusionRule.values)
-            ? inclusionRule.values
-            : [inclusionRule.values],
-        };
+      try {
+        let name = null
+        let values = null
+        const type = inclusionRule.optionType || "string_match"
+
+        if (inclusionRule.value) {
+          const parsed = JSON.parse(inclusionRule.value)
+          if (parsed.optionName && parsed.optionValues) {
+            name = parsed.optionName.trim()
+            values = Array.isArray(parsed.optionValues)
+              ? parsed.optionValues.map((v: string) => v.trim())
+              : [parsed.optionValues.trim()]
+          }
+        }
+
+        if (!name && inclusionRule.name && inclusionRule.values) {
+          name = inclusionRule.name.trim()
+          values = Array.isArray(inclusionRule.values)
+            ? inclusionRule.values.map((v: string) => v.trim())
+            : [inclusionRule.values.trim()]
+        }
+
+        if (name && values) {
+          result.product_option = { type, name, values }
+        }
+      } catch (e) {
+        console.error("Error processing product option rule:", e)
       }
     } else if (inclusionRule.type === "all") {
       return null
@@ -628,18 +691,14 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
           } else if (condition.type === "custom_field" && condition.name && condition.values) {
             additionalResult.product_custom_field = {
               name: condition.name.trim(),
-              values: Array.isArray(condition.values)
-                ? condition.values
-                : [condition.values],
-            };
+              values: Array.isArray(condition.values) ? condition.values : [condition.values],
+            }
           } else if (condition.type === "product_option" && condition.name && condition.values) {
             additionalResult.product_option = {
               type: condition.optionType || "string_match",
               name: condition.name.trim(),
-              values: Array.isArray(condition.values)
-                ? condition.values
-                : [condition.values],
-            };
+              values: Array.isArray(condition.values) ? condition.values : [condition.values],
+            }
           }
           if (Object.keys(additionalResult).length > 0) {
             andConditions.push(additionalResult)
@@ -648,9 +707,9 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
 
         // If we have multiple conditions, return them as an AND
         if (andConditions.length > 1) {
-          return { and: andConditions };
+          return { and: andConditions }
         } else if (andConditions.length === 1) {
-          return andConditions[0];
+          return andConditions[0]
         }
       }
     }
@@ -678,7 +737,6 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
         }
       } else if (exclusion.type === "category") {
         try {
-          // Try to parse the value as JSON string containing multiple category objects
           if (exclusion.value && typeof exclusion.value === "string") {
             const categoryIds = parseCategoryJson(exclusion.value)
             if (categoryIds.length > 0) {
@@ -686,39 +744,79 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
             }
           }
 
-          // If we have selectedItems, use those
           if (exclusion.selectedItems && Array.isArray(exclusion.selectedItems) && exclusion.selectedItems.length > 0) {
             const selectedIds = exclusion.selectedItems.map((item: any) => Number(item.id))
             if (!condition.categories) {
               condition.categories = selectedIds
             } else {
-              // Merge with existing categories and remove duplicates
               condition.categories = [...new Set([...condition.categories, ...selectedIds])]
             }
           }
         } catch (e) {
-          // Silent error - continue processing
+          // Silent error
         }
       } else if (exclusion.type === "brand" && exclusion.value) {
         const brands = parseIds(exclusion.value)
         if (brands.length > 0) {
           condition.brands = extractIds(brands)
         }
-      } else if (exclusion.type === "custom_field" && exclusion.name && exclusion.values) {
-        condition.product_custom_field = {
-          name: exclusion.name.trim(),
-          values: Array.isArray(exclusion.values)
-            ? exclusion.values
-            : [exclusion.values],
-        };
-      } else if (exclusion.type === "product_option" && exclusion.name && exclusion.values) {
-        condition.product_option = {
-          type: exclusion.optionType || "string_match",
-          name: exclusion.name.trim(),
-          values: Array.isArray(exclusion.values)
-            ? exclusion.values
-            : [exclusion.values],
-        };
+      } else if (exclusion.type === "custom_field") {
+        try {
+          let name = null
+          let values = null
+
+          if (exclusion.value) {
+            const parsed = JSON.parse(exclusion.value)
+            if (parsed.fieldName && parsed.fieldValues) {
+              name = parsed.fieldName.trim()
+              values = Array.isArray(parsed.fieldValues)
+                ? parsed.fieldValues.map((v: string) => v.trim())
+                : [parsed.fieldValues.trim()]
+            }
+          }
+
+          if (!name && exclusion.name && exclusion.values) {
+            name = exclusion.name.trim()
+            values = Array.isArray(exclusion.values)
+              ? exclusion.values.map((v: string) => v.trim())
+              : [exclusion.values.trim()]
+          }
+
+          if (name && values) {
+            condition.product_custom_field = { name, values }
+          }
+        } catch (e) {
+          console.error("Error processing custom field rule:", e)
+        }
+      } else if (exclusion.type === "product_option") {
+        try {
+          let name = null
+          let values = null
+          const type = exclusion.optionType || "string_match"
+
+          if (exclusion.value) {
+            const parsed = JSON.parse(exclusion.value)
+            if (parsed.optionName && parsed.optionValues) {
+              name = parsed.optionName.trim()
+              values = Array.isArray(parsed.optionValues)
+                ? parsed.optionValues.map((v: string) => v.trim())
+                : [parsed.optionValues.trim()]
+            }
+          }
+
+          if (!name && exclusion.name && exclusion.values) {
+            name = exclusion.name.trim()
+            values = Array.isArray(exclusion.values)
+              ? exclusion.values.map((v: string) => v.trim())
+              : [exclusion.values.trim()]
+          }
+
+          if (name && values) {
+            condition.product_option = { type, name, values }
+          }
+        } catch (e) {
+          console.error("Error processing product option rule:", e)
+        }
       }
 
       if (Object.keys(condition).length > 0) {
@@ -726,20 +824,10 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
       }
     }
 
-    if (exclusionConditions.length === 0) {
-      return null
-    }
-    if (exclusionConditions.length === 1) return exclusionConditions[0];
+    if (exclusionConditions.length === 0) return null
+    if (exclusionConditions.length === 1) return exclusionConditions[0]
 
-    return { and: exclusionConditions };
-
-    // For multiple exclusion conditions, combine with AND
-    // if (exclusionConditions.length > 1) {
-    //   return { and: exclusionConditions }
-    // }
-
-    // // For single exclusion condition, return it directly
-    // return exclusionConditions[0]
+    return { and: exclusionConditions }
   }
 
   // Create complex condition for rule
@@ -882,7 +970,9 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       const convertRulesToApiFormat = (rules: ExtendedRule[]) => {
+
         return rules.map((rule) => {
+          console.log(rule.reward, 'rulessss')
           // Start with a basic rule structure
           const apiRule: any = {
             apply_once: rule.apply_once !== undefined ? rule.apply_once : true,
@@ -896,7 +986,6 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
           } else {
             // Create a condition based on the rule type
             if (rule.condition === "no_conditions") {
-
             } else if (rule.condition === "reaches_subtotal") {
               // Reaches an order sub-total conditio
               apiRule.condition = {
@@ -904,15 +993,46 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
                   minimum_spend: String(rule.config?.minimumSpend || "0"),
                 },
               }
-
             } else {
               // Default to complex condition for other cases
               apiRule.condition = createComplexCondition(rule)
             }
+            apiRule.condition.cart = apiRule.condition.cart || {}
+            apiRule.condition.cart.items = apiRule.condition.cart.items || {}
+            if (rule.config?.customFields) {
+              apiRule.condition.cart.items.and = apiRule.condition.cart.items.and || []
+              rule.config.customFields.forEach((field) => {
+                // Extract exactly as shown in console examples
+                const customField = {
+                  product_custom_field: {
+                    name: field.name?.trim() || "",
+                    values: Array.isArray(field.values)
+                      ? field.values.map((v) => String(v).trim())
+                      : [String(field.values).trim()],
+                  },
+                }
+                apiRule.condition.cart.items.and.push(customField)
+              })
+            }
+
+            // Process product options from config
+            if (rule.config?.productOptions) {
+              apiRule.condition.cart.items.and = apiRule.condition.cart.items.and || []
+              rule.config.productOptions.forEach((option) => {
+                // Extract exactly as shown in console examples
+                const productOption = {
+                  product_option: {
+                    type: option.type || "string_match",
+                    name: option.name?.trim() || "",
+                    values: Array.isArray(option.values)
+                      ? option.values.map((v) => String(v).trim())
+                      : [String(option.values).trim()],
+                  },
+                }
+                apiRule.condition.cart.items.and.push(productOption)
+              })
+            }
           }
-
-
-
 
           if (rule.action) {
             apiRule.action = rule.action
@@ -945,7 +1065,8 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
                   product_id: productId,
                   product_name: productName,
                 }
-              } 0
+              }
+              0
             } else if (rule.reward === "discount_products") {
               // Product discount reward (unchanged)
               apiRule.action.cart_items = {
@@ -986,29 +1107,36 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
               }
 
               if (rule.config?.customFields) {
-                rule.config.customFields.forEach((field: any) => {
-                  if (field.name && field.values) {
-                    conditions.push({
-                      product_custom_field: {
-                        name: field.name.trim(),
-                        values: Array.isArray(field.values) ? field.values : [field.values],
-                      }
-                    })
+                apiRule.condition.cart.items.and = apiRule.condition.cart.items.and || []
+                rule.config.customFields.forEach((field) => {
+                  // Extract exactly as shown in console examples
+                  const customField = {
+                    product_custom_field: {
+                      name: field.name?.trim() || "",
+                      values: Array.isArray(field.values)
+                        ? field.values.map((v) => String(v).trim())
+                        : [String(field.values).trim()],
+                    },
                   }
+                  apiRule.condition.cart.items.and.push(customField)
                 })
               }
 
+              // Process product options from config
               if (rule.config?.productOptions) {
-                rule.config.productOptions.forEach((option: any) => {
-                  if (option.name && option.values) {
-                    conditions.push({
-                      product_option: {
-                        type: "string_match",
-                        name: option.name.trim(),
-                        values: Array.isArray(option.values) ? option.values : [option.values],
-                      }
-                    })
+                apiRule.condition.cart.items.and = apiRule.condition.cart.items.and || []
+                rule.config.productOptions.forEach((option) => {
+                  // Extract exactly as shown in console examples
+                  const productOption = {
+                    product_option: {
+                      type: option.type || "string_match",
+                      name: option.name?.trim() || "",
+                      values: Array.isArray(option.values)
+                        ? option.values.map((v) => String(v).trim())
+                        : [String(option.values).trim()],
+                    },
                   }
+                  apiRule.condition.cart.items.and.push(productOption)
                 })
               }
 
@@ -1019,23 +1147,27 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
               } else {
                 apiRule.action.cart_items.items.and = conditions
               }
-
-            } else if (rule.reward === "free_shipping") {
-              // Free shipping reward (unchanged)
-              apiRule.action.shipping = {
-                free_shipping: true,
-                zone_ids: "*",
+            } 
+            else if (rule.reward === "free_shipping") {
+              // Free shipping reward
+              const apiRule: any = {
+                action: {
+                  shipping: {
+                    free_shipping: true,
+                  },
+                },
+                apply_once: true,
+                stop: false,
               }
-
-              if (
-                rule.config?.shippingZoneType === "selected" &&
-                rule.config.selectedZones &&
-                rule.config.selectedZones.length > 0
-              ) {
-                apiRule.action.shipping.zone_ids = rule.config.selectedZones.map((zone: Zone) => zone.zoneid)
-                apiRule.action.shipping.zone_names = rule.config.selectedZones.map((zone: Zone) => zone.name)
+                console.log('else if condition', selectedZoneIds, rule.config?.shippingZoneType, rule.config)
+              // Handle zone selection based on config
+              if (rule.config?.selectedZones?.length && rule.config?.shippingZoneType) {
+                console.log('else if if condition', selectedZoneIds, rule.config?.shippingZoneType, rule.config)
+                rule.config.shippingZoneType = 'selected'
+                apiRule.action.shipping.zone_ids = selectedZoneIds
               }
-            } else if (rule.reward === "discount_subtotal") {
+            }
+             else if (rule.reward === "discount_subtotal") {
               // Cart subtotal discount reward (unchanged)
               apiRule.action.cart = {
                 discount: {},
@@ -1085,30 +1217,38 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
                 }
               }
 
+              // Process custom fields from config
               if (rule.config?.customFields) {
-                rule.config.customFields.forEach((field: any) => {
-                  if (field.name && field.values) {
-                    conditions.push({
-                      product_custom_field: {
-                        name: field.name.trim(),
-                        values: Array.isArray(field.values) ? field.values : [field.values],
-                      }
-                    })
+                apiRule.condition.cart.items.and = apiRule.condition.cart.items.and || []
+                rule.config.customFields.forEach((field) => {
+                  // Extract exactly as shown in console examples
+                  const customField = {
+                    product_custom_field: {
+                      name: field.name?.trim() || "",
+                      values: Array.isArray(field.values)
+                        ? field.values.map((v) => String(v).trim())
+                        : [String(field.values).trim()],
+                    },
                   }
+                  apiRule.condition.cart.items.and.push(customField)
                 })
               }
 
+              // Process product options from config
               if (rule.config?.productOptions) {
-                rule.config.productOptions.forEach((option: any) => {
-                  if (option.name && option.values) {
-                    conditions.push({
-                      product_option: {
-                        type: "string_match",
-                        name: option.name.trim(),
-                        values: Array.isArray(option.values) ? option.values : [option.values],
-                      }
-                    })
+                apiRule.condition.cart.items.and = apiRule.condition.cart.items.and || []
+                rule.config.productOptions.forEach((option) => {
+                  // Extract exactly as shown in console examples
+                  const productOption = {
+                    product_option: {
+                      type: option.type || "string_match",
+                      name: option.name?.trim() || "",
+                      values: Array.isArray(option.values)
+                        ? option.values.map((v) => String(v).trim())
+                        : [String(option.values).trim()],
+                    },
                   }
+                  apiRule.condition.cart.items.and.push(productOption)
                 })
               }
 
@@ -1126,12 +1266,12 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
           const processCondition = (condition: any): any => {
             if (!condition) return condition
             if (condition.customer) {
-              const customer = condition.customer;
+              const customer = condition.customer
               if (customer.in_group && Array.isArray(customer.in_group)) {
-                customer.in_group = customer.in_group.map((g: any) => typeof g === "object" ? g.id : g);
+                customer.in_group = customer.in_group.map((g: any) => (typeof g === "object" ? g.id : g))
               }
               if (customer.in_segment && Array.isArray(customer.in_segment)) {
-                customer.in_segment = customer.in_segment.map((s: any) => typeof s === "object" ? s.id : s);
+                customer.in_segment = customer.in_segment.map((s: any) => (typeof s === "object" ? s.id : s))
               }
             }
 
@@ -1152,42 +1292,58 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
 
             // Process product_custom_field
             if (condition.product_custom_field) {
-              const customField = condition.product_custom_field;
-              if (!Array.isArray(customField.values)) {
-                customField.values = [customField.values];
+              try {
+                // Handle both direct object and stringified JSON cases
+                const customField =
+                  typeof condition.product_custom_field === "string"
+                    ? JSON.parse(condition.product_custom_field)
+                    : condition.product_custom_field
+
+                condition.product_custom_field = {
+                  name: String(customField.name || customField.fieldName || "").trim(),
+                  values: Array.isArray(customField.values || customField.fieldValues)
+                    ? (customField.values || customField.fieldValues).map((v: any) => String(v).trim())
+                    : [String(customField.values || customField.fieldValues).trim()],
+                }
+              } catch (e) {
+                console.error("Error processing custom field:", e)
+                delete condition.product_custom_field
               }
-              if (customField.name && typeof customField.name === "object") {
-                customField.name = customField.name.name || customField.name.id;
-              }
-              // Ensure it matches the exact structure from example
-              condition.product_custom_field = {
-                name: customField.name.trim(),
-                values: customField.values.map((v: any) => String(v).trim())
-              };
             }
+            console.log("Product Custom Field Rule Input:", condition.product_custom_field)
 
             // Process product_option
             if (condition.product_option) {
-              const productOption = condition.product_option;
-              if (!Array.isArray(productOption.values)) {
-                productOption.values = [productOption.values];
+              try {
+                // Handle both direct object and stringified JSON cases
+                const productOption =
+                  typeof condition.product_option === "string"
+                    ? JSON.parse(condition.product_option)
+                    : condition.product_option
+
+                condition.product_option = {
+                  type: productOption.type || "string_match",
+                  name: String(productOption.name || productOption.optionName || "").trim(),
+                  values: Array.isArray(productOption.values || productOption.optionValues)
+                    ? (productOption.values || productOption.optionValues).map((v: any) => String(v).trim())
+                    : [String(productOption.values || productOption.optionValues).trim()],
+                }
+              } catch (e) {
+                console.error("Error processing product option:", e)
+                delete condition.product_option
               }
-              if (productOption.name && typeof productOption.name === "object") {
-                productOption.name = productOption.name.name || productOption.name.id;
-              }
-              condition.product_option = {
-                type: productOption.type || "string_match",
-                name: String(productOption.name).trim(),
-                values: productOption.values.map((v: any) => String(v).trim())
-              };
             }
 
+            console.log("Product Option Rule Input:", condition.product_option)
             // Process nested conditions
             if (condition.not) {
               condition.not = processCondition(condition.not)
             }
             if (condition.and && Array.isArray(condition.and)) {
               condition.and = condition.and.map(processCondition)
+            }
+            if (condition.or && Array.isArray(condition.or)) {
+              condition.or = condition.or.map(processCondition)
             }
 
             return condition
@@ -1212,7 +1368,6 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
         })
       }
 
-
       // Prepare the payload
       const payload = {
         name: formData.name || "New Coupon",
@@ -1236,14 +1391,7 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
         rules: convertRulesToApiFormat(formData.rules),
         currency_code: formData.currencyCode || "GBP",
         redemption_type: "COUPON",
-        shipping_address:
-          formData.selectedCountries?.length > 0
-            ? {
-              countries: formData.selectedCountries.map((country) => ({
-                iso2_country_code: country.id || country.name?.toUpperCase(),
-              })),
-            }
-            : null,
+        shipping_address: formData.shipping_address,
         current_uses: 0,
         max_uses: formData.maxUses ? Number(formData.maxUses) : null,
         start_date: formatDateWithTimezone(formData.startDate, formData.startTime),
@@ -1302,6 +1450,8 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
 
     fetchChannels()
   }, [])
+  const selectedCountries = formData.selectedCountries;
+
 
   return (
     <CouponContext.Provider
@@ -1315,6 +1465,7 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
         couponCodes,
         channels,
         selectedChannelIds,
+        selectedCountries,
         setSelectedChannelIds,
         showChannelModal,
         setShowChannelModal,
@@ -1327,6 +1478,8 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
         updateTargetingRule,
         setSelectedCountries,
         updateSchedule,
+        selectedZoneIds, 
+        setSelectedZoneIds
       }}
     >
       {children}

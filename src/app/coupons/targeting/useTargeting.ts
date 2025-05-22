@@ -161,19 +161,24 @@ export const useTargeting = () => {
   }
 
   const applySelectedCountries = (countries: any[]) => {
-    if (activeRuleId) {
-      setTargetingRules(
-        targetingRules.map((rule) => {
-          if (rule.id === activeRuleId) {
-            const countryNames = countries.map((country) => country.name).join(", ")
-            return { ...rule, value: countryNames, selectedItems: countries }
-          }
-          return rule
-        }),
-      )
-    }
-    setShowShippingDestinationDialog(false)
+     //console.log("🚀 applySelectedCountries called with:");
+  //console.log("Selected countries array:", countries);
+  if (activeRuleId) {
+  //console.log("First country object sample:", countries[0]);
+
+    setTargetingRules(
+      targetingRules.map((rule) => {
+        if (rule.id === activeRuleId) {
+          const countryNames = countries.map((country) => country.name).join(", ");
+          return { ...rule, value: countryNames, selectedItems: countries };
+        }
+        return rule;
+      }),
+    );
   }
+  setSelectedCountries(countries);
+  setShowShippingDestinationDialog(false);
+};
 
   const toggleGroupSelection = (group: CustomerGroup) => {
     setSelectedGroups(

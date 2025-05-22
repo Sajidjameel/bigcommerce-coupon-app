@@ -10,6 +10,7 @@ import Summary from "./summary/page";
 import Targeting from "./targeting/page";
 import Rules from "./rules/page";
 import UsageLimits from "./usage-limits/page";
+import { useCallback } from "react";
 
 // interface Channel {
 //     id: number;
@@ -30,101 +31,9 @@ export default function CouponGenerator() {
         showChannelModal,
         setShowChannelModal,
     } = useCouponContext();
-    // const [loading, setLoading] = useState(false);
-    // const [error, setError] = useState<string | null>(null);
-    // const [formData, setFormData] = useState({
-    //     name: "",
-    //     discountAmount: "",
-    //     discountType: "percentage_discount",
-    //     maxUses: "",
-    //     channels:"",
-    //     appliesTo: "",
-    //     excludeSaleItems: true,
-    //     categories: "",
-    //     canBeUsedWithOtherPromotions: true,
-    //     overrideAutomatic: false,
-    //     displayName: "",
-    //     customerGroupIds: "",
-    //     excludedCustomerGroupIds: "",
-    //     minOrderCount: "0",
-    //     startDate: "",
-    //     endDate: "",
-    //     strategy: "LEAST_EXPENSIVE",
-    //     quantity: "1"
-    // });
-    // const [couponCodes, setCouponCodes] = useState<string[]>([]);
-    // const [channels, setChannels] = useState<Channel[]>([]);
-    // const [showChannelModal, setShowChannelModal] = useState(false);
-    // const [selectedChannelIds, setSelectedChannelIds] = useState<string[]>([]);
-
-    // const handleChange = (
-    //     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-    // ) => {
-    //     const { name, value, type } = e.target;
-    //     const val = type === "checkbox" ? (e.target as HTMLInputElement).checked : value;
-    //     setFormData((prev) => ({ ...prev, [name]: val }));
-    // };
-
-    // const generateCoupon = async () => {
-    //     setLoading(true);
-    //     setError(null);
-
-    //     try {
-    //         const response = await fetch("/api/coupons", {
-    //             method: "POST",
-    //             headers: { "Content-Type": "application/json" },
-    //             body: JSON.stringify({
-    //                 name: formData.name,
-    //                 discountAmount: Number(formData.discountAmount),
-    //                 discountType: formData.discountType,
-    //                 maxUses: formData.maxUses ? Number(formData.maxUses) : null,
-    //                 appliesTo: formData.appliesTo.split(",").map((p) => Number(p.trim())),
-    //                 excludeSaleItems: formData.excludeSaleItems,
-    //                 categories: formData.categories.split(",").map((c) => Number(c.trim())),
-    //                 canBeUsedWithOtherPromotions: formData.canBeUsedWithOtherPromotions,
-    //                 overrideAutomatic: formData.overrideAutomatic,
-    //                 displayName: formData.displayName,
-    //                 customerGroupIds: formData.customerGroupIds.split(",").map((id) => Number(id.trim())),
-    //                 excludedCustomerGroupIds: formData.excludedCustomerGroupIds.split(",").map((id) => Number(id.trim())),
-    //                 minOrderCount: Number(formData.minOrderCount),
-    //                 startDate: formData.startDate,
-    //                 endDate: formData.endDate,
-    //                 strategy: formData.strategy,
-    //                 quantity: Number(formData.quantity)
-    //             }),
-    //         });
-
-    //         const data = await response.json();
-    //         if (response.ok) {
-    //             setCouponCodes(data.coupon);
-    //         } else {
-    //             setError(data.error || "Failed to create coupon");
-    //         }
-    //     } catch (err) {
-    //         setError("An error occurred");
-    //         console.error(err);
-    //     }
-
-    //     setLoading(false);
-    // };
-
-    // useEffect(() => {
-    //     const fetchChannels = async () => {
-    //         try {
-    //             const res = await fetch("/api/channels");
-    //             const data = await res.json();
-    //             console.log("Channels Data: ", data);
-    //             setChannels(data?.data || []);
-    //         } catch (error) {
-    //             console.error("Failed to fetch channels:", error);
-    //         } finally {
-    //         }
-    //     };
-
-    //     if (formData.appliesTo === "selected") {
-    //         fetchChannels();
-    //     }
-    // }, [formData.appliesTo]);
+    
+        
+   
 
     return (
         <>

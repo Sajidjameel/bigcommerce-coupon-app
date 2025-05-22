@@ -94,7 +94,7 @@ interface ExtendedRule extends Rule {
   action?: RuleAction
   apply_once?: boolean
   stop?: boolean
-  condition?: string | ComplexCondition
+  condition: string | ComplexCondition
 }
 
 interface RuleProps {

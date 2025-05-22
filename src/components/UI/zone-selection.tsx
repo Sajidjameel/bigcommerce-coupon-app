@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import { X } from "lucide-react"
+import { useCouponContext } from "../Context/CouponContext"
 
 interface Zone {
   zoneid: number
@@ -25,7 +26,7 @@ export function ZoneSelectionModal({
   initialSelectedZones = [],
 }: ZoneSelectionModalProps) {
   const [zones, setZones] = useState<Zone[]>([])
-  const [selectedZoneIds, setSelectedZoneIds] = useState<Set<number>>(new Set())
+  const {selectedZoneIds, setSelectedZoneIds} = useCouponContext()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const modalRef = useRef<HTMLDivElement>(null)
@@ -71,6 +72,7 @@ export function ZoneSelectionModal({
   const handleApply = () => {
     const selected = zones.filter(zone => selectedZoneIds.has(zone.zoneid))
     onApply(selected)
+    
     onClose()
   }
 
@@ -88,16 +90,17 @@ export function ZoneSelectionModal({
     }
   }, [isOpen, fetchZones])
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
-        onClose()
-      }
-    }
+// useEffect(() => {
+//     const handleClickOutside = (event: MouseEvent) => {
+//       if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+//         onClose()
+//       }
+//     }
 
-    if (isOpen) document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [isOpen, onClose])
+//     if (isOpen) document.addEventListener("mousedown", handleClickOutside)
+//     return () => document.removeEventListener("mousedown", handleClickOutside)
+//   }, [isOpen, onClose])
+
 
   if (!isOpen) return null
 

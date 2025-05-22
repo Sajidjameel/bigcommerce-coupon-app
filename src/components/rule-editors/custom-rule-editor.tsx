@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { memo, useCallback, useState } from "react"
 import type { Rule } from "@/types/rule-types"
 import { CONDITION_OPTIONS, REWARD_OPTIONS, FREQUENCY_OPTIONS } from "@/types/rule-types"
 
@@ -28,8 +28,9 @@ interface CustomRuleEditorProps {
   onSwitchRule: () => void
 }
 
-export function CustomRuleEditor({ rule, onRuleChange, onSave, onCancel, onSwitchRule }: CustomRuleEditorProps) {
-  const {formData, setFormData, addRule} = useCouponContext() 
+const CustomRuleEditor = memo(function CustomRuleEditor({ rule, onRuleChange, onSave, onCancel, onSwitchRule }: CustomRuleEditorProps) {
+  const { formData, setFormData, addRule } = useCouponContext()
+
   const [selectedCondition, setSelectedCondition] = useState(
     CONDITION_OPTIONS.find((option) => option.value === rule.condition) || CONDITION_OPTIONS[0],
   )
@@ -103,8 +104,10 @@ export function CustomRuleEditor({ rule, onRuleChange, onSave, onCancel, onSwitc
     } else if (value === "free_shipping") {
       updatedRule.config = {
         ...updatedRule.config,
-        shippingZoneType: updatedRule.config.shippingZoneType || "all",
-        selectedZones: updatedRule.config.selectedZones || [],
+        shippingZoneType: rule.config?.shippingZoneType || "all",
+        selectedZones: rule.config?.selectedZones || [],
+        // shippingZoneType: updatedRule.config.shippingZoneType || "all",
+        // selectedZones: updatedRule.config.selectedZones || [],
       }
     } else if (value === "discount_products") {
       updatedRule.config = {
@@ -154,7 +157,10 @@ export function CustomRuleEditor({ rule, onRuleChange, onSave, onCancel, onSwitc
     onRuleChange(updatedRule)
   }
 
-  const handleConfigChange = (field: string, value: string | number | boolean | object | null) => {
+
+
+  const handleConfigChange = (field: string, value: string | number | boolean | object | null, field2?: string, value2?: any) => {
+
     onRuleChange({
       ...rule,
       config: {
@@ -162,6 +168,7 @@ export function CustomRuleEditor({ rule, onRuleChange, onSave, onCancel, onSwitc
         [field]: value,
       },
     })
+
 
     // Clear relevant validation errors when config changes
     if (field === "inclusionRule") {
@@ -364,3 +371,5 @@ export function CustomRuleEditor({ rule, onRuleChange, onSave, onCancel, onSwitc
     </div>
   )
 }
+)
+export { CustomRuleEditor };

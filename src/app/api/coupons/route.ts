@@ -18,7 +18,7 @@ async function createCouponCode(promotionId: number, code: string, accessToken: 
     max_uses: null,
     max_uses_per_customer: null,
   }
-
+  console.log("Creating coupon code with payload:", JSON.stringify(couponPayload, null, 2))
   const couponResponse = await fetch(
     `https://api.bigcommerce.com/stores/${STORE_HASH}/v3/promotions/${promotionId}/codes`,
     {
@@ -188,7 +188,7 @@ export async function POST(req: Request): Promise<NextResponse> {
       })
       : []
 
-    console.log("shipping_address", body.shipping_address)
+    console.log("shipping_address", body.shipping_address || null)
     console.log("Formatted rules:", JSON.stringify(formattedRules, null, 2))
 
     for (let i = 0; i < quantity; i++) {
@@ -218,11 +218,8 @@ export async function POST(req: Request): Promise<NextResponse> {
         condition: body.rules.condition,
         currency_code: body.currency_code || body.currency,
         redemption_type: "COUPON",
-        shipping_address: body.shipping_address
-          ? {
-            countries: body.shipping_address.countries.map((c: any) => c.iso2_country_code),
-          }
-          : null,
+        shipping_address: body.shipping_address || null,
+
         current_uses: body.current_uses || 0,
         max_uses: body.max_uses,
         start_date: startDate || startDate,
