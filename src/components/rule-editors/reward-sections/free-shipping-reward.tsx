@@ -81,7 +81,7 @@ export function FreeShippingReward({ rule, onConfigChange }: FreeShippingRewardP
           <select
             className="appearance-none border border-gray-300 rounded px-3 py-2 pr-8 text-sm bg-white w-32"
             value={rule.config?.shippingZoneType || "all"}
-            onChange={(e) => handleZoneTypeChange(e.target.value)}
+            onChange={(e) => handleZoneTypeChange(e.target.value as "all" | "selected")}
           >
             {SHIPPING_ZONE_OPTIONS.map((option) => (
               <option key={rule.config?.selectedZones?.length === 0 ? 'all': 'selected'} value={option.value}>

@@ -10,7 +10,6 @@ import Summary from "./summary/page";
 import Targeting from "./targeting/page";
 import Rules from "./rules/page";
 import UsageLimits from "./usage-limits/page";
-import { useCallback } from "react";
 
 // interface Channel {
 //     id: number;

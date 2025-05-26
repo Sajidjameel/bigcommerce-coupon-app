@@ -1,6 +1,6 @@
 "use client"
 
-import { memo, useCallback, useState } from "react"
+import { memo, useState } from "react"
 import type { Rule } from "@/types/rule-types"
 import { CONDITION_OPTIONS, REWARD_OPTIONS, FREQUENCY_OPTIONS } from "@/types/rule-types"
 

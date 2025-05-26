@@ -990,7 +990,7 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
               // Reaches an order sub-total conditio
               apiRule.condition = {
                 cart: {
-                  minimum_spend: String(rule.config?.minimumSpend || "0"),
+                  minimum_spend: String(rule.config?.minimumSpend || "1"),
                 },
               }
             } else {
