@@ -1,5 +1,6 @@
 "use client"
 
+
 import { useState } from "react"
 import type { Rule } from "@/types/rule-types"
 import { RuleList } from "@/components/rule-list"
@@ -140,7 +141,7 @@ export default function Rules() {
     const ruleToEdit = rules.find((rule) => rule.id === ruleId)
     if (ruleToEdit) {
       if (ruleToEdit.type === "custom" && ruleToEdit.condition === "buysProducts") {
-        const config = ruleToEdit.config as any
+         const config = ruleToEdit.config as Record<string, any>
 
         if (config.inclusionRules && !config.inclusionRule) {
           config.inclusionRule = config.inclusionRules[0] || {
@@ -261,7 +262,7 @@ export default function Rules() {
             <label htmlFor="tiered">
               <div className="font-medium">Tiered reward</div>
               <div className="text-sm text-gray-600">
-                Give the last reward customer qualifies for ("get 10% off" OR "get 15% off")
+                Give the last reward customer qualifies for (&quot;get 10% off&quot; OR &quot;get 15% off&quot;)
               </div>
             </label>
           </div>
@@ -278,7 +279,7 @@ export default function Rules() {
             <label htmlFor="stacked">
               <div className="font-medium">Stacked rewards</div>
               <div className="text-sm text-gray-600">
-                Give all rewards customer qualifies for ("get 10% off" AND "free shipping")
+                Give all rewards customer qualifies for (&quot;get 10% off&quot; AND &quot;free shipping&quot;)
               </div>
             </label>
           </div>

@@ -1,8 +1,10 @@
+//eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 "use client"
 
 import type React from "react"
 import { createContext, useContext, useState, useEffect, SetStateAction, Dispatch } from "react"
-import type { Rule, Zone } from "@/types/rule-types"
+import type { Rule,  } from "@/types/rule-types"
 
 // Types for shipping destinations
 interface Country {

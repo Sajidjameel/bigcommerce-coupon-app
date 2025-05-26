@@ -111,7 +111,6 @@ export async function POST(req: Request): Promise<NextResponse> {
         });
       }
 
-
         // Process fixed_price_set action to ensure no default product IDs
         if (rule.action?.fixed_price_set?.items?.products) {
           rule.action.fixed_price_set.items.products = rule.action.fixed_price_set.items.products.filter(
@@ -134,10 +133,6 @@ export async function POST(req: Request): Promise<NextResponse> {
             (id: number) => id !== 1,
           )
 
-
-
-
-          
           // If no products are left and there's no other condition, use a different approach
           if (rule.action.cart_items.items.products.length === 0 && !rule.action.cart_items.items.and) {
             // If we have inclusion rules in the UI, make sure they're properly formatted
@@ -194,11 +189,6 @@ export async function POST(req: Request): Promise<NextResponse> {
     for (let i = 0; i < quantity; i++) {
       const code = await generateUniqueCode()
 
-
-
-
-      
-
       const startDate = body.start_date || null
       const endDate = body.end_date || null
 
@@ -207,23 +197,21 @@ export async function POST(req: Request): Promise<NextResponse> {
         name: body.name,
         channels: body.channels && body.channels.length > 0 ? body.channels : [], // Default to channel 1
         created_from: "react_ui",
-
         customer: {
-          group_ids: body.customer.group_ids || [],
+          group_ids: body.customer?.group_ids || [],
           minimum_order_count: 1,
           excluded_group_ids: body.customer?.excluded_group_ids || [],
           segments: body.customer?.segments || null,
         },
         rules: formattedRules,
-        condition: body.rules.condition,
+        condition: body.rules?.[0]?.condition || null,
         currency_code: body.currency_code || body.currency,
         redemption_type: "COUPON",
         shipping_address: body.shipping_address || null,
-
         current_uses: body.current_uses || 0,
         max_uses: body.max_uses,
-        start_date: startDate || startDate,
-        end_date: endDate || null,
+        start_date: startDate,
+        end_date: endDate,
         status: "ENABLED",
         schedule: body.schedule,
         can_be_used_with_other_promotions: body.can_be_used_with_other_promotions,

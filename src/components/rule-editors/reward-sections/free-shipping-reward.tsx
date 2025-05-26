@@ -18,24 +18,16 @@ interface FreeShippingRewardProps {
 }
 
 export function FreeShippingReward({ rule, onConfigChange }: FreeShippingRewardProps) {
-  // Force the dropdown to show 'selected' when there are selected zones
-  if (rule.config?.selectedZones && rule.config.selectedZones.length > 0) {
-    rule.config.shippingZoneType = "selected"
-  }
-  
   const [showZoneModal, setShowZoneModal] = useState(false)
   const [selectedZones, setSelectedZones] = useState<Zone[]>(rule.config?.selectedZones || [])
   const [zoneType, setZoneType] = useState<"all" | "selected">(rule.config?.shippingZoneType || "all")
 
-  // Sync local state with prop changes when rule is loaded for editing
+  //Sync local state with prop changes
   useEffect(() => {
-    if (rule.config?.selectedZones) {
-      setSelectedZones(rule.config.selectedZones)
-    }
-    if (rule.config?.shippingZoneType) {
-      setZoneType(rule.config.shippingZoneType)
-    }
-  }, [rule.id])
+    // if (rule.config?.selectedZones) {
+    //   setSelectedZones(rule.config.selectedZones)
+    // }
+  }, [rule.config?.selectedZones])
 
   // Stable callback for zone selection
   const handleZoneSelection = useCallback((zones: Zone[]) => {
@@ -55,21 +47,15 @@ export function FreeShippingReward({ rule, onConfigChange }: FreeShippingRewardP
   }, [onConfigChange])
 
   const handleZoneTypeChange = (value: "all" | "selected") => {
+    console.log("Zone type changed")
     setZoneType(value)
-    
-    // Save the shipping zone type to the rule config
-    onConfigChange("shippingZoneType", value)
-    
+    console.log("Config zoneType", value)
+    setShowZoneModal(prev => !prev)
     if (value === "all") {
-      // Clear selected zones when "all zones" is selected
       onConfigChange("selectedZones", [])
     } else if (value === "selected") {
-      // Only open modal if no zones are currently selected
-      if (selectedZones.length === 0) {
-        setShowZoneModal(true)
-      }
-      // Keep existing selected zones
       onConfigChange("selectedZones", selectedZones)
+      
     }
   }
  // Stable callback for zone type change
@@ -94,15 +80,11 @@ export function FreeShippingReward({ rule, onConfigChange }: FreeShippingRewardP
         <div className="relative">
           <select
             className="appearance-none border border-gray-300 rounded px-3 py-2 pr-8 text-sm bg-white w-32"
-<<<<<<< HEAD
             value={rule.config?.shippingZoneType || "all"}
-=======
-            value={zoneType}
->>>>>>> ba1eba9f355bed205f779f5d30d53c0db015a40c
             onChange={(e) => handleZoneTypeChange(e.target.value as "all" | "selected")}
           >
             {SHIPPING_ZONE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
+              <option key={rule.config?.selectedZones?.length === 0 ? 'all': 'selected'} value={option.value}>
                 {option.label}
               </option>
             ))}
