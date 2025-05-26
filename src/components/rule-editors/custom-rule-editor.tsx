@@ -106,8 +106,6 @@ const CustomRuleEditor = memo(function CustomRuleEditor({ rule, onRuleChange, on
         ...updatedRule.config,
         shippingZoneType: rule.config?.shippingZoneType || "all",
         selectedZones: rule.config?.selectedZones || [],
-        // shippingZoneType: updatedRule.config.shippingZoneType || "all",
-        // selectedZones: updatedRule.config.selectedZones || [],
       }
     } else if (value === "discount_products") {
       updatedRule.config = {
@@ -255,7 +253,7 @@ const CustomRuleEditor = memo(function CustomRuleEditor({ rule, onRuleChange, on
             <div className="relative">
               <select
                 className="appearance-none border border-gray-300 rounded px-3 py-2 pr-8 text-sm bg-white w-64"
-                value={rule.condition}
+                value={typeof rule.condition === 'string' ? rule.condition : 'no_conditions'}
                 onChange={(e) => handleConditionChange(e.target.value)}
               >
                 {/* <option value="">Select condition</option> */}

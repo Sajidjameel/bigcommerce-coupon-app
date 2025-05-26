@@ -79,16 +79,16 @@ export function ZoneSelectionModal({
   useEffect(() => {
     if (isOpen) {
       fetchZones()
-
-      // Only update selected zones if they're not already set
-      setSelectedZoneIds(prev => {
-        if (prev.size === 0) {
-          return new Set(initialSelectedZones.map(z => z.zoneid))
-        }
-        return prev
-      })
+      
+      // Always update selected zones with initialSelectedZones when modal opens
+      // This ensures that when editing a rule, the correct zones are selected
+      if (initialSelectedZones && initialSelectedZones.length > 0) {
+        setSelectedZoneIds(new Set(initialSelectedZones.map(z => z.zoneid)))
+      } else {
+        setSelectedZoneIds(new Set())
+      }
     }
-  }, [isOpen, fetchZones])
+  }, [isOpen, fetchZones, initialSelectedZones])
 
 // useEffect(() => {
 //     const handleClickOutside = (event: MouseEvent) => {
