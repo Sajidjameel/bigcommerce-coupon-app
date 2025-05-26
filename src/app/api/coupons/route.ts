@@ -58,7 +58,7 @@ export async function POST(req: Request): Promise<NextResponse> {
 
     // Create properly formatted rules with both condition and action
     const formattedRules = Array.isArray(body.rules)
-      ? body.rules.map((rule: any, index: number) => {
+      ? body.rules.map((rule: any) => {
         if (rule.condition?.cart?.items?.products) {
           rule.condition.cart.items.products = rule.condition.cart.items.products.filter((id: number) => id !== 1)
 

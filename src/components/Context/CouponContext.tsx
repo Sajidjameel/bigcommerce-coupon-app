@@ -19,6 +19,7 @@ interface TargetingRule {
   type: string | null
   condition: string
   value: string
+  
   selectedItems?: any[]
 }
 
@@ -489,6 +490,7 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
           const parsed = JSON.parse(fixedValue)
           return parsed.map((item: any) => Number(item.id))
         } catch (e) {
+          console.error("Failed to parse JSON array:", e)
           // If that fails, try to split by },{
           const categoryIds: number[] = []
           const jsonObjects = jsonString.split("},{")
@@ -504,7 +506,8 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
                 categoryIds.push(Number(obj.id))
               }
             } catch (e) {
-              // Silent error - continue processing
+               console.error("Failed to parse JSON array:", e)
+
             }
           }
 
@@ -518,6 +521,8 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
         .map((id) => Number(id.trim()))
         .filter((id) => !isNaN(id) && id > 0)
     } catch (e) {
+      console.error("Failed to parse JSON array:", e)
+
       return []
     }
   }
@@ -540,7 +545,7 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
           }))
         }
       } catch (e) {
-        // Not JSON, continue with comma parsing
+                  console.error("Failed to parse JSON array:", e)
       }
 
       // Parse comma-separated list
@@ -554,6 +559,8 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
               ? { id: Number(parsed.id), name: parsed.name || `Item ${parsed.id}` }
               : { id: Number(item.trim()), name: `Item ${item.trim()}` }
           } catch (e) {
+               console.error("Failed to parse JSON array:", e)
+
             // Not JSON, just convert to number
             return { id: Number(item.trim()), name: `Item ${item.trim()}` }
           }
@@ -755,6 +762,8 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
             }
           }
         } catch (e) {
+                    console.error("Failed to parse JSON array:", e)
+
           // Silent error
         }
       } else if (exclusion.type === "brand" && exclusion.value) {
@@ -1056,6 +1065,8 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
                 } catch (e) {
                   productId = Number(rule.config.giftProduct)
                   productName = `Product ${productId}`
+                 console.error("Failed to parse JSON array:", e)
+
                 }
               } else {
                 productId = 0

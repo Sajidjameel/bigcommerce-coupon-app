@@ -23,10 +23,11 @@ export default function ShippingDestination({
   onApply,
   initialSelectedCountries = [],
 }: ShippingDestinationProps) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [countries, setCountries] = useState<Country[]>([])
   const { selectedCountries,setSelectedCountries} = useCouponContext()
-  // const [selectedCountries, setSelectedCountries] = useState<Country[]>(initialSelectedCountries)
   const [searchQuery, setSearchQuery] = useState("")
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [loading, setLoading] = useState(true)
   const modalRef = useRef<HTMLDivElement>(null)
 

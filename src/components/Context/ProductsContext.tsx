@@ -3,12 +3,7 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react"
 import type { Product } from "@/types/rule-types"
 
-interface Pagination {
-  total_pages: number
-  current_page: number
-  total: number
-  count: number
-}
+
 
 interface ProductSearchContextType {
   productsByPage: Map<number, Product[]>

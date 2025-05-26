@@ -161,21 +161,21 @@ export function BrandSelectionModal({
   }
 
   // Handle pagination
-  const handlePreviousPage = () => {
-    if (currentPage > 1) {
-      const newPage = currentPage - 1
-      setCurrentPage(newPage)
-      fetchBrands(newPage, searchTerm)
-    }
-  }
+  // const handlePreviousPage = () => {
+  //   if (currentPage > 1) {
+  //     const newPage = currentPage - 1
+  //     setCurrentPage(newPage)
+  //     fetchBrands(newPage, searchTerm)
+  //   }
+  // }
 
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      const newPage = currentPage + 1
-      setCurrentPage(newPage)
-      fetchBrands(newPage, searchTerm)
-    }
-  }
+  // const handleNextPage = () => {
+  //   if (currentPage < totalPages) {
+  //     const newPage = currentPage + 1
+  //     setCurrentPage(newPage)
+  //     fetchBrands(newPage, searchTerm)
+  //   }
+  // }
 
   // Toggle brand selection
   const toggleBrandSelection = (brand: Brand) => {

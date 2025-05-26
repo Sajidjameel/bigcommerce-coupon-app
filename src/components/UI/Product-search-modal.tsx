@@ -1,3 +1,6 @@
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
+
 "use client"
 
 import type React from "react"
@@ -29,7 +32,7 @@ export function ProductSearchModal({
   const modalRef = useRef<HTMLDivElement>(null)
   const isInitialMount = useRef(true)
   const searchInputRef = useRef<HTMLInputElement>(null)
-  const [currentPageState, setCurrentPageState] = useState(1)
+  
 
   // Initialize selected products when modal opens or selectedProduct changes
   useEffect(() => {

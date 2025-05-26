@@ -33,7 +33,6 @@ interface SelectedCategory {
 }
 
 // Cache for API responses
-const channelsCache: any = null
 let categoriesCache: any = null
 
 // Global state to remember selections across modal opens
@@ -58,7 +57,7 @@ export function CategorySelectorModal({
     { id: 2, name: "next" },
   ]
   const [trees, setTrees] = useState(defaultTrees)
-
+  console.log("Trees initialized:", setTrees(trees))
   // Initialize selected categories from props on first render and when initialSelectedCategories changes
   useEffect(() => {
     if (isOpen) {
@@ -165,6 +164,7 @@ export function CategorySelectorModal({
   }
 
   // Toggle category expansion
+   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const toggleCategory = (category: Category, path = "") => {
     const key = `${category.tree_id}-${category.category_id}`
     setExpandedCategories((prev) => {
