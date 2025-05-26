@@ -1150,21 +1150,21 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
             } 
             else if (rule.reward === "free_shipping") {
               // Free shipping reward
-              const apiRule: any = {
-                action: {
-                  shipping: {
-                    free_shipping: true,
-                  },
-                },
-                apply_once: true,
-                stop: false,
+              apiRule.action.shipping = {
+                free_shipping: true,
               }
-                console.log('else if condition', selectedZoneIds, rule.config?.shippingZoneType, rule.config)
+              
               // Handle zone selection based on config
-              if (rule.config?.selectedZones?.length && rule.config?.shippingZoneType) {
-                console.log('else if if condition', selectedZoneIds, rule.config?.shippingZoneType, rule.config)
-                rule.config.shippingZoneType = 'selected'
-                apiRule.action.shipping.zone_ids = selectedZoneIds
+              if (rule.config?.shippingZoneType === "selected" && rule.config?.selectedZones && rule.config.selectedZones.length > 0) {
+                // Extract zone IDs from the selectedZones array
+                const selectedZones = rule.config.selectedZones || []
+                const zoneIds = selectedZones.map(zone => zone.zoneid)
+                
+                // Add zone IDs to the shipping action
+                apiRule.action.shipping.zone_ids = zoneIds
+                
+                // Also add zone names for reference
+                apiRule.action.shipping.zone_names = selectedZones.map(zone => zone.name)
               }
             }
              else if (rule.reward === "discount_subtotal") {
@@ -1426,6 +1426,17 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
       if (!response.ok) {
         throw new Error(data.error || "Failed to create coupon")
       }
+      
+      // Log successful coupon generation with details
+      console.log("✅ Coupon generated successfully:", {
+        coupon: data.coupon,
+        payload: payload,
+        rules: payload.rules,
+        shippingZones: payload.rules.filter(rule => rule.action?.shipping?.zone_ids).map(rule => ({
+          zoneIds: rule.action.shipping.zone_ids,
+          zoneNames: rule.action.shipping.zone_names
+        }))
+      })
 
       setCouponCodes(data.coupon || [])
     } catch (err) {
