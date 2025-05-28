@@ -71,7 +71,7 @@ export function CustomFieldSelectorModal({
           <div>
             <label className="block text-sm font-bold mb-2">Field value</label>
             <div className="space-y-2">
-              {fieldValues.map((fieldValue, index) => (
+              {fieldValues.map((fieldValue) => (
                 <div key={fieldValue.id} className="flex items-center gap-2">
                   <input
                     type="text"

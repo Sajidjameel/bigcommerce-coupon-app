@@ -62,6 +62,7 @@ export function ProductExclusionRule({ rules, onRulesChange }: ProductExclusionR
 
           newSelectedProducts.set(index, products)
         } catch (e) {
+          console.error("Error parsing product IDs from rule value:", e)
           // If parsing fails, set empty array
           newSelectedProducts.set(index, [])
         }
@@ -314,7 +315,7 @@ export function ProductExclusionRule({ rules, onRulesChange }: ProductExclusionR
         }
       }
     } catch (e) {
-      // If parsing fails, return empty array
+      console.error("Error parsing rule value:", e);
       return [];
     }
   
@@ -343,6 +344,7 @@ export function ProductExclusionRule({ rules, onRulesChange }: ProductExclusionR
           primary_image: null,
         }))
       } catch (e) {
+        console.error("Error parsing product IDs from rule value:", e)
         return []
       }
     }

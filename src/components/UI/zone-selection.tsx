@@ -88,7 +88,7 @@ export function ZoneSelectionModal({
         setSelectedZoneIds(new Set())
       }
     }
-  }, [isOpen, fetchZones, initialSelectedZones])
+  }, [isOpen, fetchZones, initialSelectedZones ,setSelectedZoneIds])
 
 // useEffect(() => {
 //     const handleClickOutside = (event: MouseEvent) => {

@@ -75,6 +75,7 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
 
           newSelectedProducts.set(index, products)
         } catch (e) {
+          console.error("Error parsing product IDs from rule value:", e)
           // If parsing fails, set empty array
           newSelectedProducts.set(index, [])
         }
@@ -323,6 +324,7 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
             })
             .filter((item) => item !== null) as SelectorItem[]
         } catch (e) {
+          console.error("Error parsing category value as array:", e)
           // If parsing as array fails, try as single object
           let parsedValue
           try {
@@ -374,6 +376,7 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
           primary_image: null,
         }))
       } catch (e) {
+        console.error("Error parsing product IDs from rule value:", e)
         return []
       }
     }

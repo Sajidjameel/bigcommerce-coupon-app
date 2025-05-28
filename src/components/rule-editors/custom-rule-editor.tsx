@@ -29,11 +29,12 @@ interface CustomRuleEditorProps {
 }
 
 const CustomRuleEditor = memo(function CustomRuleEditor({ rule, onRuleChange, onSave, onCancel, onSwitchRule }: CustomRuleEditorProps) {
-  const { formData, setFormData, addRule } = useCouponContext()
+  const { addRule } = useCouponContext()
 
   const [selectedCondition, setSelectedCondition] = useState(
     CONDITION_OPTIONS.find((option) => option.value === rule.condition) || CONDITION_OPTIONS[0],
   )
+  console.log("Selected condition:", selectedCondition)
 
   const [selectedReward, setSelectedReward] = useState(
     REWARD_OPTIONS.find((option) => option.value === rule.reward) || REWARD_OPTIONS[0],
@@ -47,7 +48,7 @@ const CustomRuleEditor = memo(function CustomRuleEditor({ rule, onRuleChange, on
     rewardProducts: "",
     rewardExclusionProducts: "",
   })
-  const [showRuleModal, setShowRuleModal] = useState<boolean>(false)
+ // const [showRuleModal, setShowRuleModal] = useState<boolean>(false)
 
   const handleConditionChange = (value: string) => {
     const condition = CONDITION_OPTIONS.find((option) => option.value === value) || CONDITION_OPTIONS[0]
@@ -157,7 +158,7 @@ const CustomRuleEditor = memo(function CustomRuleEditor({ rule, onRuleChange, on
 
 
 
-  const handleConfigChange = (field: string, value: string | number | boolean | object | null, field2?: string, value2?: any) => {
+  const handleConfigChange = (field: string, value: string | number | boolean | object | null) => {
 
     onRuleChange({
       ...rule,

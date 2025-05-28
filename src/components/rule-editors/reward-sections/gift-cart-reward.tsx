@@ -19,7 +19,7 @@ interface GiftCartRewardProps {
 export function GiftCartReward({ rule, onConfigChange }: GiftCartRewardProps) {
   // Extract values from rule config or use defaults
   const giftQuantity = rule?.config?.giftQuantity ?? 1
-  const giftProduct = rule?.config?.giftProduct ?? ""
+  
 
   // Component state
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)

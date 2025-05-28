@@ -422,7 +422,7 @@ const RuleList: React.FC = () => {
 
       {formData.rules.length === 0 ? (
         <div className="text-center py-8 border border-dashed rounded-md bg-gray-50">
-          <p className="text-gray-500">No rules added yet. Click "Add rule" to create your first rule.</p>
+       <p className="text-gray-500">No rules added yet. Click &quot;Add rule&quot; to create your first rule.</p>
         </div>
       ) : (
         <div>

@@ -140,7 +140,7 @@ export function SelectorModal({
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
             <h2 className="text-xl font-medium mb-4">Not Implemented</h2>
-            <p className="mb-4">The selector for "{type}" is not yet implemented.</p>
+        <p className="mb-4">The selector for &quot;{type}&quot; is not yet implemented.</p>
             <div className="flex justify-end">
               <button onClick={onClose} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
                 Close
