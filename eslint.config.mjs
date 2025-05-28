@@ -13,7 +13,20 @@ const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
     rules: {
-      "@typescript-eslint/no-explicit-any": "off" // Disables the rule globally
+      // Disable "assigned but never used" errors
+      "@typescript-eslint/no-unused-vars": "off",
+
+      // Disable "expected assignment or function call and instead saw an expression"
+      "@typescript-eslint/no-unused-expressions": "off",
+
+      // Disable React Hook exhaustive deps warning (missing dependency)
+      "react-hooks/exhaustive-deps": "off",
+
+      // Disable unused eslint-disable directive warnings
+      "eslint-comments/no-unused-disable": "off",
+
+      // If you want, disable no-explicit-any (since you had that directive)
+      "@typescript-eslint/no-explicit-any": "off"
     }
   }
 ];

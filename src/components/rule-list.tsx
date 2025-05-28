@@ -26,10 +26,10 @@ export function RuleList({ rules, onEditRule, onDeleteRule }: RuleListProps) {
       {rules.map((rule) => (
         <div key={rule.id} className="grid grid-cols-12 gap-4 py-4 border-b border-gray-300 text-sm">
           <div className="col-span-5">
-            {rule.condition
+            {(rule.condition as string)
               .toLowerCase()
               .replace(/_/g, ' ')
-              .replace(/^\w/, (c) => c.toUpperCase())}
+              .replace(/^\w/, (c :string) => c.toUpperCase())}
           </div>
           <div className="col-span-5">{rule.reward.toLowerCase().replace(/_/g,' ').replace(/^\w/,(c)=> c.toUpperCase())}</div>
           <div className="col-span-2 flex justify-end space-x-2">

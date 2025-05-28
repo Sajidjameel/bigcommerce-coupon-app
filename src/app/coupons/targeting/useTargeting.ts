@@ -23,11 +23,10 @@ export const useTargeting = () => {
   const pageSize = 250
   const [segments, setSegments] = useState<unknown[]>([])
   const [loadingSegments, setLoadingSegments] = useState(false)
-  const [countries, setCountries] = useState<unknown[]>([])
-  const [loadingCountries, setLoadingCountries] = useState(false)
   const [selectedCountries, setSelectedCountries] = useState<any[]>([])
   const [showShippingDestinationDialog, setShowShippingDestinationDialog] = useState(false)
 
+  
   const availableRuleTypes: AvailableRuleType[] = [
     { id: "customerGroup", label: "Customer Group" },
     { id: "customerSegment", label: "Customer Segment" },

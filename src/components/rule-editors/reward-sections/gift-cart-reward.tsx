@@ -28,7 +28,7 @@ export function GiftCartReward({ rule, onConfigChange }: GiftCartRewardProps) {
   // Initialize selected product from rule config
   useEffect(() => {
     if (rule?.config?.giftProduct && typeof rule.config.giftProduct === 'object') {
-      setSelectedProduct(rule.config.giftProduct)
+      setSelectedProduct(rule.config.giftProduct as Product)
     }
   }, [rule?.config?.giftProduct])
 
