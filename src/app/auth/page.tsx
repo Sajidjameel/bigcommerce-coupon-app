@@ -1,11 +1,46 @@
-import { cookies } from 'next/headers';
+// app/auth/page.tsx
+"use client";
 
-export default async function AuthPage() {
-    const token = (await cookies()).get('bigcommerce_access_token');
+import React from "react";
 
-    if (!token) {
-        return <a href="https://login.bigcommerce.com/oauth2/authorize?client_id=YOUR_CLIENT_ID&redirect_uri=YOUR_REDIRECT_URI&scope=STORE_INFORMATION%20CHECKOUT_CONTENT&response_type=code">Login with BigCommerce</a>;
-    }
+export default function AuthPage() {
+  const handleLogin = async () => {
+    const res = await fetch("/api/auth/url");
+    const { url } = await res.json();
+    window.location.href = url;
+  };
 
-    return <div>Welcome! Your token is: {token.value}</div>;
+  return (
+    <main className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
+      <div className="bg-white shadow-lg rounded-xl p-8 w-full max-w-md text-center">
+        <img
+          src="https://cdn11.bigcommerce.com/s-123456/images/stencil/original/logo.svg"
+          alt="BigCommerce App"
+          className="mx-auto h-12 mb-6"
+        />
+
+        <h1 className="text-2xl font-semibold text-gray-800 mb-4">
+          Sign in with BigCommerce
+        </h1>
+        <p className="text-gray-500 mb-6">
+          Connect your BigCommerce store to continue.
+        </p>
+
+        <button
+          onClick={handleLogin}
+          className="w-full bg-[#203239] hover:bg-[#1a262c] text-white py-3 px-6 rounded-lg font-medium transition-colors duration-200"
+        >
+          Login with BigCommerce
+        </button>
+
+        <p className="text-xs text-gray-400 mt-6">
+          By logging in, you agree to our{" "}
+          <a href="/terms" className="underline hover:text-gray-500">
+            Terms of Service
+          </a>
+          .
+        </p>
+      </div>
+    </main>
+  );
 }

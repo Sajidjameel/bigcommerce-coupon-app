@@ -22,7 +22,7 @@ export async function GET(request: Request) {
 
     const client_id = process.env.BIGCOMMERCE_CLIENT_ID;
     const client_secret = process.env.BIGCOMMERCE_CLIENT_SECRET;
-    const redirect_uri = process.env.AUTH_CALLBACK_URL;
+    const redirect_uri = process.env.BIGCOMMERCE_REDIRECT_URI;
 
     const payload = {
         client_id,
