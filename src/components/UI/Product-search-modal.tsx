@@ -1,6 +1,3 @@
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-
-
 "use client"
 
 import type React from "react"

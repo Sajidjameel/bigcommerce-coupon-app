@@ -6,7 +6,7 @@ import { ProductSearchModal } from "../UI/Product-search-modal"
 import { SelectorModal } from "../UI/select-modal"
 import { TagInput } from "../UI/tag-input"
 import { handleAddInclusionRule, handleDeleteInclusionRule, handleProductSelect, handleSelectorSelect } from "./utils/inclusion-rule-funtion"
-import { ProductInclusionRuleProps, RuleItem, SelectorItem } from "./types"
+import { ProductInclusionRuleProps, SelectorItem } from "./types"
 
 export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRuleProps) {
   // Convert the inclusion rule structure to an array format for easier handling
@@ -30,37 +30,6 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
 
   // Store selected items for each rule to preserve values when reopening modals
   const [selectedItems, setSelectedItems] = useState<Map<number, SelectorItem[]>>(new Map())
-
-  // Initialize selectedProducts from rules when component mounts or rules change
-  useEffect(() => {
-    const newSelectedProducts = new Map<number, Product[]>()
-
-    inclusionRules.forEach((rule, index) => {
-      if (rule.type === "individual" && rule.value) {
-        try {
-          // Try to parse product IDs from the rule value
-          const productIds = rule.value.split(",").map((id) => Number.parseInt(id.trim(), 10))
-
-          // Create placeholder products with the information we have
-          const products = productIds.map((id) => ({
-            id,
-            name: rule.selector || `Product ${id}`,
-            sku: "",
-            price: 0,
-            primary_image: null,
-          }))
-
-          newSelectedProducts.set(index, products)
-        } catch (e) {
-          console.error("Error parsing product IDs from rule value:", e)
-          // If parsing fails, set empty array
-          newSelectedProducts.set(index, [])
-        }
-      }
-    })
-
-    setSelectedProducts(newSelectedProducts)
-  }, [rule])
 
   const handleTypeChange = (index: number, type: string) => {
     let updatedRules = [...inclusionRules]
@@ -331,6 +300,37 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
 
     return []
   }
+
+  // Initialize selectedProducts from rules when component mounts or rules change
+  useEffect(() => {
+    const newSelectedProducts = new Map<number, Product[]>()
+
+    inclusionRules.forEach((rule, index) => {
+      if (rule.type === "individual" && rule.value) {
+        try {
+          // Try to parse product IDs from the rule value
+          const productIds = rule.value.split(",").map((id) => Number.parseInt(id.trim(), 10))
+
+          // Create placeholder products with the information we have
+          const products = productIds.map((id) => ({
+            id,
+            name: rule.selector || `Product ${id}`,
+            sku: "",
+            price: 0,
+            primary_image: null,
+          }))
+
+          newSelectedProducts.set(index, products)
+        } catch (e) {
+          console.error("Error parsing product IDs from rule value:", e)
+          // If parsing fails, set empty array
+          newSelectedProducts.set(index, [])
+        }
+      }
+    })
+
+    setSelectedProducts(newSelectedProducts)
+  }, [rule])
 
   // Determine if we should show the "Add another inclusion rule" button
   // Only show if all rules have valid selections and first rule is not "individual" or "all"

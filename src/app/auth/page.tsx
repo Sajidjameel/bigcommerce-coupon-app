@@ -1,6 +1,7 @@
 // app/auth/page.tsx
 "use client";
 
+import Image from "next/image";
 import React from "react";
 
 export default function AuthPage() {
@@ -13,7 +14,7 @@ export default function AuthPage() {
   return (
     <main className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
       <div className="bg-white shadow-lg rounded-xl p-8 w-full max-w-md text-center">
-        <img
+        <Image
           src="https://cdn11.bigcommerce.com/s-123456/images/stencil/original/logo.svg"
           alt="BigCommerce App"
           className="mx-auto h-12 mb-6"

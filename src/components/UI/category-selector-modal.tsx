@@ -7,7 +7,7 @@ import { renderCategory } from "./render-category"
 import { fetchCategories } from "./__request"
 import { useEffect, useState } from "react"
 
-let categoriesCache: any = null
+const categoriesCache: any = null
 let globalSelectedCategories = new Map<string, SelectedCategory>()
 
 export function CategorySelectorModal({

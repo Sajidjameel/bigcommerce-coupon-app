@@ -42,7 +42,6 @@ const isCategorySelected = (treeId: number, categoryId: number, selectedCategori
     return selectedCategories.has(`${treeId}-${categoryId}`)
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const toggleCategory = (category: Category, setExpandedCategories: Dispatch<SetStateAction<Set<string>>>) => {
     const key = `${category.tree_id}-${category.category_id}`
     setExpandedCategories((prev) => {
