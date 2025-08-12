@@ -1,21 +1,11 @@
 import { Dispatch, SetStateAction } from "react"
-import { Rule } from "./rule-types"
+import { Rule, RuleType, RuleTypeId, TargetingRule } from "./rule-types"
 import { DiscountType, RewardType, Status } from "./enum"
 
 export interface Country {
   id: string | number
   name: string
   iso2_country_code: string
-}
-
-// Types for targeting rules
-export interface TargetingRule {
-  id: string
-  type: string | null
-  condition: string
-  value: string
-  
-  selectedItems?: any[]
 }
 
 // Types for rules
@@ -253,7 +243,7 @@ export interface CouponContextProps {
   // Additional methods for targeting
   addTargetingRule: () => void
   removeTargetingRule: (id: string) => void
-  updateTargetingRule: (id: string, updates: Partial<TargetingRule>) => void
+  updateTargetingRule: (id: RuleTypeId, updates: Partial<TargetingRule>) => void
 
   // Methods for shipping destinations
   selectedCountries: Country[]

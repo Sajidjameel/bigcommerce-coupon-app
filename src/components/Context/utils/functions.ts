@@ -1,3 +1,7 @@
+import { convertRules } from "@/utils/generate-coupon-function"
+import { formatDateWithTimezone, formatTimeForSchedule } from "./format-date"
+import { CouponFormData } from "@/types/couponContext-types"
+
 // NEW: Recursive function to process all conditions
 export const processCondition = (condition: any): any => {
     if (!condition) return condition
@@ -85,7 +89,7 @@ export const processCondition = (condition: any): any => {
     return condition
 }
 
-export function preparePayload(formData, selectedChannelIds){
+export function preparePayload(formData: CouponFormData, selectedChannelIds: string[]){
     return {
             name: formData.name || "New Coupon",
             channels: selectedChannelIds[0] === "0" ? [] : selectedChannelIds.map((id) => ({ id: Number(id) })),
@@ -105,7 +109,7 @@ export function preparePayload(formData, selectedChannelIds){
                 : [],
               segments: null,
             },
-            rules: convertRulesToApiFormat(formData.rules),
+            rules: convertRules(formData.rules),
             currency_code: formData.currencyCode || "GBP",
             redemption_type: "COUPON",
             shipping_address: formData.shipping_address,

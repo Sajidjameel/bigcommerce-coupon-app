@@ -3,7 +3,7 @@ import { ExtendedRule } from "@/types/couponContext-types"
 import { createComplexCondition } from "./inclusion-rule-function"
 import { CreateActionOnRule } from "./functions"
 
-export const convertRulesToApiFormat = (rules: ExtendedRule[]) => {
+export const convertRules = (rules: ExtendedRule[]) => {
 
         return rules.map((rule) => {
           // Start with a basic rule structure

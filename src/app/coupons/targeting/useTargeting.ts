@@ -216,9 +216,8 @@ export const useTargeting = () => {
       } catch (err) {
         console.error("Fetch error:", err)
         setError("Failed to fetch currencies.")
-      } finally {
-        setLoading(false)
-      }
+      } 
+      setLoading(false)
     }
     fetchCurrencies()
   }, [])

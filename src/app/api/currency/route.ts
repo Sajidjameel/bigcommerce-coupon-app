@@ -15,7 +15,7 @@ export async function GET() {
   }
 
   try {
-    console.log('Making request to BigCommerce API...');
+    console.log('Making request to BigCommerce API...', BIGCOMMERCE_ACCESS_TOKEN);
     const res = await fetch(
       `https://api.bigcommerce.com/stores/${BIGCOMMERCE_STORE_HASH}/v2/currencies`,
       {
