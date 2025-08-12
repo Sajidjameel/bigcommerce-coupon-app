@@ -1,6 +1,6 @@
 "use client"
 
-import type { Rule, InclusionRule, ExclusionRule } from "@/types/rule-types"
+import type { Rule, RuleModel } from "@/types/rule-types"
 import {
   DISCOUNT_TYPE_OPTIONS,
   DISCOUNT_FROM_OPTIONS,
@@ -31,11 +31,11 @@ export function DiscountProductsReward({ rule, onConfigChange }: DiscountProduct
     onConfigChange("appliedQuantity", newQuantity)
   }, [rule.config.appliedQuantity, onConfigChange])
 
-  const handleRewardInclusionRuleChange = useCallback((updatedRule: InclusionRule) => {
+  const handleRewardInclusionRuleChange = useCallback((updatedRule: RuleModel) => {
     onConfigChange("rewardInclusionRule", updatedRule)
   }, [onConfigChange])
 
-  const handleRewardExclusionRulesChange = useCallback((updatedRules: ExclusionRule[]) => {
+  const handleRewardExclusionRulesChange = useCallback((updatedRules: RuleModel[]) => {
     onConfigChange("rewardExclusionRules", updatedRules)
   }, [onConfigChange])
 

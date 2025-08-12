@@ -1,6 +1,6 @@
 "use client"
 
-import type { Rule, InclusionRule, ExclusionRule } from "@/types/rule-types"
+import type { Rule, RuleModel } from "@/types/rule-types"
 import { MinusCircle, PlusCircle } from "lucide-react"
 import { ProductInclusionRule } from "../product-inclusion-rule"
 import { ProductExclusionRule } from "../product-exclusion-rule"
@@ -48,14 +48,14 @@ export function FixedPriceReward({ rule, onConfigChange }: FixedPriceRewardProps
   }
 
   const handleRewardInclusionRuleChange = useCallback(
-    (updatedRule: InclusionRule) => {
+    (updatedRule: RuleModel) => {
       onConfigChange("rewardInclusionRule", updatedRule)
     },
     [onConfigChange],
   )
 
   const handleRewardExclusionRulesChange = useCallback(
-    (updatedRules: ExclusionRule[]) => {
+    (updatedRules: RuleModel[]) => {
       onConfigChange("rewardExclusionRules", updatedRules)
     },
     [onConfigChange],

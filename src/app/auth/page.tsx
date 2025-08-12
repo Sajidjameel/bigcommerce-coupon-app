@@ -17,6 +17,8 @@ export default function AuthPage() {
         <Image
           src="https://cdn11.bigcommerce.com/s-123456/images/stencil/original/logo.svg"
           alt="BigCommerce App"
+          width={4}
+          height={4}
           className="mx-auto h-12 mb-6"
         />
 

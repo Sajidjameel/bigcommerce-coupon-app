@@ -1,6 +1,6 @@
 "use client"
 
-import type { Rule, InclusionRule, ExclusionRule } from "@/types/rule-types"
+import type { Rule, RuleModel } from "@/types/rule-types"
 import { REACHING_TYPE_OPTIONS } from "@/types/rule-types"
 import { MinusCircle, PlusCircle } from "lucide-react"
 import { ProductInclusionRule } from "../product-inclusion-rule"
@@ -22,11 +22,11 @@ export function BuysProductsCondition({ rule, onConfigChange }: BuysProductsCond
     onConfigChange("reachingQuantity", newQuantity)
   }
 
-  const handleInclusionRuleChange = (updatedRule: InclusionRule) => {
+  const handleInclusionRuleChange = (updatedRule: RuleModel) => {
     onConfigChange("inclusionRule", updatedRule)
   }
 
-  const handleExclusionRulesChange = (updatedRules: ExclusionRule[]) => {
+  const handleExclusionRulesChange = (updatedRules: RuleModel[]) => {
     onConfigChange("exclusionRules", updatedRules)
   }
 

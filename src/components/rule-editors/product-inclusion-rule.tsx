@@ -1,18 +1,19 @@
 "use client"
-import { type InclusionRule, PRODUCT_INCLUSION_OPTIONS, type Product } from "@/types/rule-types"
+import { AdditionalCondition, PRODUCT_INCLUSION_OPTIONS, RuleModel, type Product } from "@/types/rule-types"
 import { Search, Trash2 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { ProductSearchModal } from "../UI/Product-search-modal"
 import { SelectorModal } from "../UI/select-modal"
 import { TagInput } from "../UI/tag-input"
-import { handleAddInclusionRule, handleDeleteInclusionRule, handleProductSelect, handleSelectorSelect } from "./utils/inclusion-rule-funtion"
 import { ProductInclusionRuleProps, SelectorItem } from "./types"
+import { handleAddRule, handleDeleteRule, handleProductSelect, handleSelectorSelect, handleTypeChange } from "./function"
+import { getInitialSelectedItems, getSelectedProductsForRule } from "./utils-functions"
 
 export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRuleProps) {
   // Convert the inclusion rule structure to an array format for easier handling
-  const inclusionRules: InclusionRule[] = [
+  const inclusionRules: RuleModel[] = [
     { id: rule.id, type: rule.type, value: rule.value || "", selector: rule.selector || "" },
-    ...(rule.additionalConditions || []).map((condition) => ({
+    ...(rule.additionalConditions || []).map((condition: AdditionalCondition) => ({
       id: condition.id,
       type: condition.type,
       value: condition.value || "",
@@ -31,165 +32,8 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
   // Store selected items for each rule to preserve values when reopening modals
   const [selectedItems, setSelectedItems] = useState<Map<number, SelectorItem[]>>(new Map())
 
-  const handleTypeChange = (index: number, type: string) => {
-    let updatedRules = [...inclusionRules]
-
-    // If changing the first rule, reset all additional rules
-    if (index === 0) {
-      // Keep only the first rule with the new type
-      updatedRules = [
-        {
-          ...updatedRules[0],
-          type,
-          value: "",
-          selector: "",
-        },
-      ]
-    } else {
-      // Just update the specific rule
-      updatedRules[index] = {
-        ...updatedRules[index],
-        type,
-        value: "",
-        selector: "",
-      }
-    }
-
-    // Convert back to the original structure
-    updateOriginalStructure(updatedRules)
-  }
-
-  handleSelectorSelect(
-    index,
-    items,
-    selectedItems,
-    setSelectedItems,
-    setShowSelectorModal,
-    inclusionRules,
-    updateOriginalStructure
-  )
-
-  // Get initial selected items for the current editing rule
-  const getInitialSelectedItems = (index: number): SelectorItem[] => {
-    // If we have stored selected items for this rule, return them
-    if (selectedItems.has(index)) {
-      return selectedItems.get(index) || []
-    }
-
-    // Otherwise, try to parse from the rule value
-    const rule = inclusionRules[index]
-    if (!rule || !rule.value) return []
-
-    try {
-      if (rule.type === "custom_field") {
-        const parsedValue = JSON.parse(rule.value)
-        if (parsedValue.fieldName && parsedValue.fieldValues) {
-          return [
-            {
-              id: Date.now(),
-              name: rule.selector,
-              fieldName: parsedValue.fieldName,
-              fieldValues: parsedValue.fieldValues,
-            },
-          ]
-        }
-      } else if (rule.type === "product_option") {
-        const parsedValue = JSON.parse(rule.value)
-        if (parsedValue.optionName && parsedValue.optionValues) {
-          return [
-            {
-              id: Date.now(),
-              name: rule.selector,
-              optionName: parsedValue.optionName,
-              optionValues: parsedValue.optionValues,
-            },
-          ]
-        }
-      } else if (rule.type === "category") {
-        // Try to parse as array of category objects
-        try {
-          return rule.value
-            .split(",")
-            .map((val) => {
-              let parsedVal
-              try {
-                parsedVal = JSON.parse(val)
-              } catch (e) {
-                console.error("Error parsing category value:", e)
-                return null // Or handle the error as appropriate
-              }
-              return {
-                id: parsedVal.id,
-                name: parsedVal.name,
-                channelId: parsedVal.channelId,
-                channelName: parsedVal.channelName,
-                path: parsedVal.path,
-              }
-            })
-            .filter((item) => item !== null) as SelectorItem[]
-        } catch (e) {
-          console.error("Error parsing category value as array:", e)
-          // If parsing as array fails, try as single object
-          let parsedValue
-          try {
-            parsedValue = JSON.parse(rule.value)
-          } catch (e) {
-            console.error("Error parsing category value:", e)
-            return []
-          }
-          if (parsedValue.id) {
-            return [
-              {
-                id: parsedValue.id,
-                name: parsedValue.name,
-                channelId: parsedValue.channelId,
-                channelName: parsedValue.channelName,
-                path: parsedValue.path,
-              },
-            ]
-          }
-        }
-      }
-    } catch (e) {
-      // If parsing fails, return empty array
-      return []
-    }
-
-    return []
-  }
-
-  // Get selected products for a rule
-  const getSelectedProductsForRule = (index: number): Product[] => {
-    if (selectedProducts.has(index)) {
-      return selectedProducts.get(index) || []
-    }
-
-    // Try to parse from the rule value if we don't have it in state
-    const rule = inclusionRules[index]
-    if (rule && rule.type === "individual" && rule.value) {
-      try {
-        // Try to parse product IDs from the rule value
-        const productIds = rule.value.split(",").map((id) => Number.parseInt(id.trim(), 10))
-
-        // Create placeholder products with the information we have
-        return productIds.map((id) => ({
-          id,
-          name: rule.selector || `Product ${id}`,
-          sku: "",
-          price: 0,
-          primary_image: null,
-        }))
-      } catch (e) {
-        console.error("Error parsing product IDs from rule value:", e)
-        return []
-      }
-    }
-
-    return []
-  }
-
   // Convert the array structure back to the original inclusion rule structure
-  const updateOriginalStructure = (rules: InclusionRule[]) => {
+  const updateOriginalStructure = (rules: RuleModel[]) => {
     if (rules.length === 0) {
       onRuleChange({
         ...rule,
@@ -246,11 +90,11 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
   // Get available options for a specific rule
   const getAvailableOptions = (currentIndex: number) => {
     const currentType = inclusionRules[currentIndex]?.type;
-
+  
     if (currentIndex === 0) {
       return PRODUCT_INCLUSION_OPTIONS;
     }
-
+  
     const filteredOptions = PRODUCT_INCLUSION_OPTIONS.filter((option) => {
       if (option.value === "please_select") return false; // <-- prevent duplicate
       if (option.value === currentType) return true;
@@ -260,10 +104,10 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
       }
       return true;
     });
-
+  
     return [{ value: "please_select", label: "Please select a value", disabled: true }, ...filteredOptions];
   };
-
+  
 
   // Handle input click to open appropriate modal
   const handleInputClick = (index: number, type: string) => {
@@ -284,7 +128,7 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
 
     // For individual products
     if (rule.type === "individual") {
-      const products = getSelectedProductsForRule(index)
+      const products = getSelectedProductsForRule(index, inclusionRules, selectedProducts)
       return products.map((p) => ({ id: p.id, name: p.name }))
     }
 
@@ -301,7 +145,7 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
     return []
   }
 
-  // Initialize selectedProducts from rules when component mounts or rules change
+    // Initialize selectedProducts from rules when component mounts or rules change
   useEffect(() => {
     const newSelectedProducts = new Map<number, Product[]>()
 
@@ -345,7 +189,7 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
       {inclusionRules.length === 0 ? (
         <button
           type="button"
-          onClick={()=> handleAddInclusionRule(inclusionRules, updateOriginalStructure)}
+          onClick={()=> handleAddRule(inclusionRules, updateOriginalStructure)}
           className="hover:cursor-pointer text-blue-600 hover:text-blue-800 text-sm"
         >
           + Add inclusion rule
@@ -367,7 +211,7 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
                 <select
                   className="appearance-none border border-gray-300 rounded px-3 py-2 pr-8 text-sm bg-white w-48"
                   value={rule.type}
-                  onChange={(e) => handleTypeChange(index, e.target.value)}
+                  onChange={(e) => handleTypeChange(index, e.target.value, inclusionRules, updateOriginalStructure)}
                   disabled={index > 0 && isFirstRuleIndividualOrAll}
                 >
                   {getAvailableOptions(index).map((option) => (
@@ -404,14 +248,7 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
               {index > 0 && (
                 <button
                   type="button"
-                  onClick={() => handleDeleteInclusionRule(index,
-                    setSelectedItems,
-                    selectedItems,
-                    selectedProducts,
-                    setSelectedProducts,
-                    updateOriginalStructure,
-                    inclusionRules
-                  )}
+                  onClick={() => handleDeleteRule(index, inclusionRules, updateOriginalStructure, selectedItems, selectedProducts, setSelectedItems, setSelectedProducts)}
                   className="text-blue-600 hover:text-blue-800"
                   disabled={index > 0 && isFirstRuleIndividualOrAll}
                 >
@@ -426,7 +263,7 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
             <div className="ml-4">
               <button
                 type="button"
-                onClick={()=>handleAddInclusionRule(inclusionRules, updateOriginalStructure)}
+                onClick={()=> handleAddRule(inclusionRules, updateOriginalStructure)}
                 className="cursor-pointer text-blue-600 hover:text-blue-800 text-sm"
               >
                 + Add another inclusion rule
@@ -441,32 +278,20 @@ export function ProductInclusionRule({ rule, onRuleChange }: ProductInclusionRul
         key={`product-modal-${currentEditingIndex}`}
         isOpen={showProductModal}
         onClose={() => setShowProductModal(false)}
-        onSelect={(products) => handleProductSelect(index,
-          products,
-          selectedProducts,
-          setSelectedProducts,
-          updateOriginalStructure,
-          inclusionRules,
-          setShowProductModal)}
+        onSelect={(products) => handleProductSelect(currentEditingIndex, products, inclusionRules, updateOriginalStructure, selectedProducts, setSelectedProducts, setShowProductModal)}
         selectedProduct={selectedProducts.get(currentEditingIndex) || null}
         multiple={true} // Allow multiple product selection for inclusion rules
       />
 
       {/* Selector Modal for brands, categories, etc. */}
       <SelectorModal
-        key={`selector-modal-${currentEditingIndex}`}
+       key={`selector-modal-${currentEditingIndex}`}
         isOpen={showSelectorModal}
         onClose={() => setShowSelectorModal(false)}
-        onSelect={(items) => handleProductSelect(index,
-          products,
-          selectedProducts,
-          setSelectedProducts,
-          updateOriginalStructure,
-          inclusionRules,
-          setShowProductModal)}
+        onSelect={(items) => handleSelectorSelect(currentEditingIndex, items, inclusionRules, updateOriginalStructure, selectedItems, setSelectedItems, setShowProductModal)}
         type={currentSelectorType}
         multiple={true}
-        initialSelectedItems={getInitialSelectedItems(currentEditingIndex)}
+        initialSelectedItems={getInitialSelectedItems(currentEditingIndex, inclusionRules, selectedItems)}
       />
     </div>
   )

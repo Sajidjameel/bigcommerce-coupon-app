@@ -21,8 +21,8 @@ export type Rule = {
     reachingType?: "quantity" | "total_value"
     reachingQuantity?: number
     reachingValue?: number
-    inclusionRule?: InclusionRule
-    exclusionRules?: ExclusionRule[]
+    inclusionRule?: RuleModel
+    exclusionRules?: RuleModel[]
     // Fields for discount rewards
     discountType?: "percentage" | "amount"
     discountValue?: number
@@ -31,8 +31,8 @@ export type Rule = {
     appliedQuantity?: number
     appliedTarget?: "least_expensive" | "most_expensive"
     // Separate inclusion/exclusion rules for the reward
-    rewardInclusionRule?: InclusionRule
-    rewardExclusionRules?: ExclusionRule[]
+    rewardInclusionRule?: RuleModel
+    rewardExclusionRules?: RuleModel[]
     
     // Additional properties
    
@@ -99,20 +99,16 @@ export interface Pagination {
   total: number
   count: number
 }
-export interface InclusionRule {
+export interface RuleModel {
   id: string
   type: string
   value: string
   selector?: string
-   name?: string
-  additionalConditions?: {
-    id: string
-    type: string
-    value: string
-    selector?: string
-  }[]
-    selectedItems?: Array<{ id: number; name: string }>
+  name?: string
+  additionalConditions?: AdditionalCondition[]
+  selectedItems?: Array<{ id: number; name: string }>
 }
+
 
 export type AdditionalCondition = {
   id: string
@@ -121,14 +117,6 @@ export type AdditionalCondition = {
   selector?: string
 }
 
-export type ExclusionRule = {
-  id: string
-  type: string // "individual", "category", "brand", "custom_field", "product_option"
-  value?: string
-  selector?: string
-   name?: string
-  selectedItems?: Array<{ id: number; name: string }>
-}
 
 export type RuleType = {
   id: string

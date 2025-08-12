@@ -1,9 +1,9 @@
-import { InclusionRule } from "@/types/rule-types"
+import { RuleModel } from "@/types/rule-types"
 
 // Convert the inclusion rule with additionalConditions to an array of rules
 export interface ProductInclusionRuleProps {
-  rule: InclusionRule
-  onRuleChange: (rule: InclusionRule) => void
+  rule: RuleModel
+  onRuleChange: (rule: RuleModel) => void
 }
 
 export interface RuleItem {
