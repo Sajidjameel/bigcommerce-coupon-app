@@ -20,7 +20,7 @@ export const convertRules = (rules: ExtendedRule[]) => {
             // Create a condition based on the rule type
             if (rule.condition === "no_conditions") {
             } else if (rule.condition === "reaches_subtotal") {
-              // Reaches an order sub-total conditio
+              // Reaches an order sub-total condition
               apiRule.condition = {
                 cart: {
                   minimum_spend: String(rule.config?.minimumSpend || "1"),
@@ -31,7 +31,7 @@ export const convertRules = (rules: ExtendedRule[]) => {
               apiRule.condition = createComplexCondition(rule)
             }
             apiRule.condition.cart = apiRule.condition.cart || {}
-            apiRule.condition.cart.items = apiRule.condition.cart.items || {}
+            //  apiRule.condition.cart.items = apiRule.condition.cart.items || {}
             if (rule.config?.customFields) {
               apiRule.condition.cart.items.and = apiRule.condition.cart.items.and || []
               rule.config.customFields.forEach((field) => {

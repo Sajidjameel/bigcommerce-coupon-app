@@ -1,6 +1,6 @@
 "use client"
 
-import { memo, useState } from "react"
+import { memo, useEffect, useState } from "react"
 import type { Rule } from "@/types/rule-types"
 import { CONDITION_OPTIONS, REWARD_OPTIONS, FREQUENCY_OPTIONS } from "@/types/rule-types"
 
@@ -63,7 +63,7 @@ const CustomRuleEditor = memo(function CustomRuleEditor({ rule, onRuleChange, on
     const updatedRule = { ...rule, condition: value }
 
     if (value === "reaches_subtotal") {
-      updatedRule.config = { ...updatedRule.config, minimumSpend: updatedRule.config.minimumSpend || 0 }
+      updatedRule.config = { ...updatedRule.config, minimumSpend: updatedRule.config.minimumSpend || 1 }
     } else if (value === "buys_products") {
       updatedRule.config = {
         ...updatedRule.config,
@@ -209,29 +209,33 @@ const CustomRuleEditor = memo(function CustomRuleEditor({ rule, onRuleChange, on
   }
 
   const renderRewardComponent = () => {
-    switch (rule.reward) {
-      case "gift_cart":
-        return <GiftCartReward rule={rule} onConfigChange={handleConfigChange} />
-      case "free_shipping":
-        // Check shipping zones validation
-        const shippingError = validateShippingZones(rule)
-        if (shippingError) {
-          setValidationErrors((prev) => ({
-            ...prev,
-            rewardProducts: shippingError,
-          }))
-        }
-        return <FreeShippingReward rule={rule} onConfigChange={handleConfigChange} />
-      case "discount_products":
-        return <DiscountProductsReward rule={rule} onConfigChange={handleConfigChange} />
-      case "discount_subtotal":
-        return <DiscountSubtotalReward rule={rule} onConfigChange={handleConfigChange} />
-      case "fixed_price":
-        return <FixedPriceReward rule={rule} onConfigChange={handleConfigChange} />
-      default:
-        return null
+  switch (rule.reward) {
+    case "gift_cart":
+      return <GiftCartReward rule={rule} onConfigChange={handleConfigChange} />
+    case "free_shipping":
+      return <FreeShippingReward rule={rule} onConfigChange={handleConfigChange} />
+    case "discount_products":
+      return <DiscountProductsReward rule={rule} onConfigChange={handleConfigChange} />
+    case "discount_subtotal":
+      return <DiscountSubtotalReward rule={rule} onConfigChange={handleConfigChange} />
+    case "fixed_price":
+      return <FixedPriceReward rule={rule} onConfigChange={handleConfigChange} />
+    default:
+      return null
+  }
+}
+useEffect(() => {
+  if (rule.reward === "free_shipping") {
+    const shippingError = validateShippingZones(rule)
+    if (shippingError) {
+      setValidationErrors((prev) => ({
+        ...prev,
+        rewardProducts: shippingError,
+      }))
     }
   }
+}, [rule, rule.reward])
+
 
   return (
     <div className="fixed inset-0 bg-white z-50 overflow-y-auto">

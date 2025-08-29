@@ -73,7 +73,10 @@ export function FixedPriceReward({ rule, onConfigChange }: FixedPriceRewardProps
             type="number"
             className="border border-gray-300 rounded pl-8 pr-3 py-2 text-sm w-32"
             value={price}
-            onChange={(e) => onConfigChange("price", Number.parseFloat(e.target.value))}
+            onChange={(e) => {
+              const val = e.target.value;
+              onConfigChange("price", val === "" ? "" : Number.parseFloat(val));
+            }}
           />
         </div>
         <span className="text-sm">for</span>
@@ -82,9 +85,8 @@ export function FixedPriceReward({ rule, onConfigChange }: FixedPriceRewardProps
             type="button"
             onClick={() => handleQuantityChange(false)}
             disabled={quantity <= 1}
-            className={`px-2 py-1 ${
-              quantity <= 1 ? "text-gray-300 cursor-not-allowed" : "text-gray-500 hover:text-gray-700"
-            }`}
+            className={`px-2 py-1 ${quantity <= 1 ? "text-gray-300 cursor-not-allowed" : "text-gray-500 hover:text-gray-700"
+              }`}
           >
             <MinusCircle className={`cursor-pointer w-4 h-4 ${quantity <= 1 ? "text-gray-300" : "text-blue-600"}`} />
           </button>
@@ -149,9 +151,8 @@ export function FixedPriceReward({ rule, onConfigChange }: FixedPriceRewardProps
                 type="button"
                 onClick={() => handleQuantityChange(false)}
                 disabled={quantity <= 1}
-                className={`px-2 py-1 ${
-                  quantity <= 1 ? "text-gray-300 cursor-not-allowed" : "text-gray-500 hover:text-gray-700"
-                }`}
+                className={`px-2 py-1 ${quantity <= 1 ? "text-gray-300 cursor-not-allowed" : "text-gray-500 hover:text-gray-700"
+                  }`}
               >
                 <MinusCircle className={`w-4 h-4 ${quantity <= 1 ? "text-gray-300" : "text-blue-600"}`} />
               </button>

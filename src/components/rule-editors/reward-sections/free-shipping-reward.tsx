@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useMemo } from "react"
 import { Search, X } from "lucide-react"
 import type { Rule } from "@/types/rule-types"
 import { SHIPPING_ZONE_OPTIONS } from "@/types/rule-types"
@@ -19,23 +19,23 @@ interface FreeShippingRewardProps {
 
 export function FreeShippingReward({ rule, onConfigChange }: FreeShippingRewardProps) {
   const [showZoneModal, setShowZoneModal] = useState(false)
-  const [selectedZones, setSelectedZones] = useState<Zone[]>(rule.config?.selectedZones || [])
-  const [zoneType, setZoneType] = useState<"all" | "selected">(rule.config?.shippingZoneType || "all")
+  const [selectedZones, setSelectedZones] = useState<Zone[]>(rule.config?.selectedZones || []);
+  // const [zoneType, setZoneType] = useState<"all" | "selected">(rule.config?.shippingZoneType || "all")
 
   //Sync local state with prop changes
   useEffect(() => {
-    // if (rule.config?.selectedZones) {
-    //   setSelectedZones(rule.config.selectedZones)
-    // }
+    if (rule.config?.selectedZones) {
+      setSelectedZones(rule.config.selectedZones)
+    }
   }, [rule.config?.selectedZones])
 
   // Stable callback for zone selection
-  const handleZoneSelection = useCallback((zones: Zone[]) => {
-    setSelectedZones(zones)
-    setShowZoneModal(true)
-    
-    onConfigChange("selectedZones", zones)
-  }, [onConfigChange])
+ const handleZoneSelection = useCallback((zones: Zone[]) => {
+    setSelectedZones(zones);
+    onConfigChange("selectedZones", zones);
+    setShowZoneModal(false);
+  }, [onConfigChange]);
+
 
   // Stable callback for removing zones
   const removeZone = useCallback((zoneId: number) => {
@@ -46,31 +46,26 @@ export function FreeShippingReward({ rule, onConfigChange }: FreeShippingRewardP
     })
   }, [onConfigChange])
 
-  const handleZoneTypeChange = (value: "all" | "selected") => {
-    console.log("Zone type changed")
-    setZoneType(value)
-    console.log("Config zoneType", value)
-    setShowZoneModal(prev => !prev)
-    if (value === "all") {
-      onConfigChange("selectedZones", [])
-    } else if (value === "selected") {
-      onConfigChange("selectedZones", selectedZones)
-      
+    const handleZoneTypeChange = (value: "all" | "selected") => {
+    // Check if the value is actually different before calling onConfigChange
+    if (rule.config?.shippingZoneType !== value) {
+      onConfigChange("shippingZoneType", value);
+      if (value === "all") {
+        onConfigChange("selectedZones", []);
+      }
     }
-  }
+  };
  // Stable callback for zone type change
   // const handleZoneTypeChange = useCallback((value: string) => {
   //   onConfigChange("shippingZoneType", value)
   //   if (value === "all") {
-  //     // Only update selectedZones if changing to "all"
   //     onConfigChange("selectedZones", [])
   //   } 
-  //   // else if (value === "selected") {
-  //   //   // If changing to "selected", ensure selectedZones is set
-  //   //   onConfigChange("selectedZones", selectedZones)
-  //   // }
+  //   else if (value === "selected") {
+  //     onConfigChange("selectedZones", selectedZones)
+  //   }
   // }, [onConfigChange])
-
+  
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
@@ -84,7 +79,7 @@ export function FreeShippingReward({ rule, onConfigChange }: FreeShippingRewardP
             onChange={(e) => handleZoneTypeChange(e.target.value as "all" | "selected")}
           >
             {SHIPPING_ZONE_OPTIONS.map((option) => (
-              <option key={rule.config?.selectedZones?.length === 0 ? 'all': 'selected'} value={option.value}>
+              <option key={option.value} value={option.value}>
                 {option.label}
               </option>
             ))}
@@ -97,7 +92,7 @@ export function FreeShippingReward({ rule, onConfigChange }: FreeShippingRewardP
         </div>
       </div>
 
-      { zoneType === "selected" && (
+      {rule.config?.shippingZoneType === "selected" && (
         <div className="flex items-center gap-2 ml-4">
           <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
           <span className="text-sm">Including zones:</span>
@@ -117,8 +112,8 @@ export function FreeShippingReward({ rule, onConfigChange }: FreeShippingRewardP
                     <button
                       type="button"
                       onClick={(e) => {
-                        e.stopPropagation()
-                        removeZone(zone.zoneid)
+                        e.stopPropagation();
+                        removeZone(zone.zoneid);
                       }}
                       className="text-gray-500 hover:text-gray-700"
                     >
