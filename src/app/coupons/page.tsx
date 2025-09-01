@@ -25,9 +25,6 @@ export default function CouponGenerator() {
 
     const handleCheckboxChange = (channelId: number) => {
         const id = channelId.toString();
-        console.log(id, "channels id handle checkbox change");
-        console.log(selectedChannelIds, "selectchannelsid inside handle checkbox change");
-
         if (channelId === 0) return;
 
         setSelectedChannelIds((prev) => {
@@ -41,10 +38,7 @@ export default function CouponGenerator() {
 
     const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.checked) {
-            console.log(e.target.checked, "selectallll");
             setSelectedChannelIds(channels.map((c) => c.id.toString()).filter((id) => id !== "0"));
-
-            console.log(selectedChannelIds, "selectchannelsid inside handle selectall");
         } else {
             setSelectedChannelIds([]);
         }
