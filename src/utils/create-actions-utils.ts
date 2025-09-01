@@ -124,16 +124,16 @@ export function FreeShipping( rule:ExtendedRule ,apiRule:any){
 
         // Handle zone selection based on config
         if (rule.config?.shippingZoneType === "selected" && rule.config?.selectedZones && rule.config.selectedZones.length > 0) {
-            // Extract zone IDs from the selectedZones array
             const selectedZones = rule.config.selectedZones || []
             const zoneIds = selectedZones.map(zone => zone.zoneid)
 
-            // Add zone IDs to the shipping action
             apiRule.action.shipping.zone_ids = zoneIds
 
-            // Also add zone names for reference
             apiRule.action.shipping.zone_names = selectedZones.map(zone => zone.name)
         }
+         else if (rule.config?.shippingZoneType === "all") {
+        apiRule.action.shipping.zone_ids = "*"  
+    }
 }
 
 export function DiscountSubtoatal(rule:ExtendedRule , apiRule:any){

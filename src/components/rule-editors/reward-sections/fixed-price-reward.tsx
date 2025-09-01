@@ -60,7 +60,6 @@ export function FixedPriceReward({ rule, onConfigChange }: FixedPriceRewardProps
     },
     [onConfigChange],
   )
-
   return (
     <div className="space-y-4">
       {/* Price and Quantity */}

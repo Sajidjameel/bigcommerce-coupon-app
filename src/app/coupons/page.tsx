@@ -1,20 +1,12 @@
 "use client";
 
-// import { useEffect, useState } from "react";
-// import ScheduleComponent from "./schedule/page";
-import Input from "@/components/UI/Input";
-// import Select from "@/components/UI/Select";
-// import { Checkbox } from "@/components/UI/Checkbox";
 import { useCouponContext } from "@/components/Context/CouponContext";
 import Summary from "./summary/page";
 import Targeting from "./targeting/page";
 import Rules from "./rules/page";
 import UsageLimits from "./usage-limits/page";
-
-// interface Channel {
-//     id: number;
-//     name: string;
-// }
+import Input from "@/components/UI/Input";
+import { useEffect, useRef } from "react";
 
 export default function CouponGenerator() {
     const {
@@ -30,9 +22,41 @@ export default function CouponGenerator() {
         showChannelModal,
         setShowChannelModal,
     } = useCouponContext();
-    
-        
-   
+
+    const handleCheckboxChange = (channelId: number) => {
+        const id = channelId.toString();
+        console.log(id, "channels id handle checkbox change");
+        console.log(selectedChannelIds, "selectchannelsid inside handle checkbox change");
+
+        if (channelId === 0) return;
+
+        setSelectedChannelIds((prev) => {
+            if (prev.includes(id)) {
+                return prev.filter((cid) => cid !== id && cid !== "0");
+            } else {
+                return [...prev.filter((cid) => cid !== "0"), id];
+            }
+        });
+    };
+
+    const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.checked) {
+            console.log(e.target.checked, "selectallll");
+            setSelectedChannelIds(channels.map((c) => c.id.toString()).filter((id) => id !== "0"));
+
+            console.log(selectedChannelIds, "selectchannelsid inside handle selectall");
+        } else {
+            setSelectedChannelIds([]);
+        }
+    };
+
+
+
+    useEffect(() => {
+        console.log("Updated selectedChannelIds:", selectedChannelIds);
+    }, [selectedChannelIds]);
+
+
 
     return (
         <>
@@ -40,16 +64,17 @@ export default function CouponGenerator() {
                 <h2 className="text-xl font-semibold mb-6">Edit Promotion</h2>
 
                 <div className="space-y-8">
-
                     <Summary />
-
                     <Targeting />
-
                     <Rules />
-
                     <UsageLimits />
 
-                    <Input label="How many coupons?" name="quantity" value={formData.quantity} onChange={handleChange} />
+                    <Input
+                        label="How many coupons?"
+                        name="quantity"
+                        value={formData.quantity}
+                        onChange={handleChange}
+                    />
 
                     <button
                         className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition"
@@ -81,17 +106,15 @@ export default function CouponGenerator() {
                             <div className="bg-white rounded-lg shadow-lg p-6 w-[400px] max-h-[80vh] overflow-y-auto">
                                 <h2 className="text-lg font-semibold mb-4">Select Channels</h2>
 
-                                <label className="flex items-center mb-2">
+                                <label className="flex items-center mb-2 cursor-pointer">
                                     <input
                                         type="checkbox"
-                                        checked={selectedChannelIds.length === channels.length}
-                                        onChange={(e) => {
-                                            if (e.target.checked) {
-                                                setSelectedChannelIds(channels.map((c) => c.id.toString()));
-                                            } else {
-                                                setSelectedChannelIds([]);
-                                            }
-                                        }}
+                                        className="cursor-pointer"
+                                        checked={
+                                            channels.filter((c) => c.id !== 0).length > 0 &&
+                                            selectedChannelIds.length === channels.filter((c) => c.id !== 0).length
+                                        }
+                                        onChange={handleSelectAll}
                                     />
                                     <span className="ml-2">Select All</span>
                                 </label>
@@ -101,15 +124,9 @@ export default function CouponGenerator() {
                                         <li key={channel.id} className="flex items-center">
                                             <input
                                                 type="checkbox"
+                                                className="cursor-pointer"
                                                 checked={selectedChannelIds.includes(channel.id.toString())}
-                                                onChange={(e) => {
-                                                    const id = channel.id.toString();
-                                                    setSelectedChannelIds((prev) =>
-                                                        e.target.checked
-                                                            ? [...prev, id]
-                                                            : prev.filter((cid) => cid !== id)
-                                                    );
-                                                }}
+                                                onChange={() => handleCheckboxChange(channel.id)}
                                             />
                                             <span className="ml-2">{channel.name}</span>
                                         </li>

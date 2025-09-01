@@ -59,45 +59,51 @@ export const extractIds = (items: Array<{ id: number; name: string }>): number[]
   }
 
   // Parse IDs from various formats
-export  const parseIds = (value: string): Array<{ id: number; name: string }> => {
-    if (!value) return []
+export const parseIds = (value: string): Array<{ id: number; name: string }> => {
+  if (!value) return []
 
-    try {
-      // Try to parse as JSON first (for objects with id property)
-      try {
-        const parsed = JSON.parse(value)
-        if (parsed && parsed.id) {
-          return [{ id: Number(parsed.id), name: parsed.name || `Item ${parsed.id}` }]
-        }
-        if (Array.isArray(parsed)) {
-          return parsed.map((item) => ({
-            id: Number(item.id),
-            name: item.name || `Item ${item.id}`,
-          }))
-        }
-      } catch (e) {
-                  console.error("Failed to parse JSON array:", e)
+  try {
+    // Case 1: value is a valid JSON array or object
+    if ((value.trim().startsWith("{") && value.trim().endsWith("}")) ||
+        (value.trim().startsWith("[") && value.trim().endsWith("]"))) {
+      const parsed = JSON.parse(value)
+
+      if (Array.isArray(parsed)) {
+        return parsed.map((item: any) => ({
+          id: Number(item.id),
+          name: item.name || `Item ${item.id}`,
+        }))
       }
 
-      // Parse comma-separated list
-      return value
-        .split(",")
-        .map((item) => {
-          // Try to extract id from JSON string if possible
-          try {
-            const parsed = JSON.parse(item.trim())
-            return parsed && parsed.id
-              ? { id: Number(parsed.id), name: parsed.name || `Item ${parsed.id}` }
-              : { id: Number(item.trim()), name: `Item ${item.trim()}` }
-          } catch (e) {
-               console.error("Failed to parse JSON array:", e)
-
-            // Not JSON, just convert to number
-            return { id: Number(item.trim()), name: `Item ${item.trim()}` }
-          }
-        })
-        .filter((item) => !isNaN(item.id) && item.id > 0)
-    } catch (e) {
-      return []
+      if (parsed && parsed.id) {
+        return [{ id: Number(parsed.id), name: parsed.name || `Item ${parsed.id}` }]
+      }
     }
+
+    // Case 2: comma-separated IDs
+    return value
+      .split(",")
+      .map((item) => {
+        const trimmed = item.trim()
+
+        // Only try JSON.parse if it looks like an object/array
+        if ((trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+            (trimmed.startsWith("[") && trimmed.endsWith("]"))) {
+          try {
+            const parsed = JSON.parse(trimmed)
+            if (parsed && parsed.id) {
+              return { id: Number(parsed.id), name: parsed.name || `Item ${parsed.id}` }
+            }
+          } catch {
+            // ignore, fallback to numeric parse
+          }
+        }
+
+        return { id: Number(trimmed), name: `Item ${trimmed}` }
+      })
+      .filter((item) => !isNaN(item.id) && item.id > 0)
+  } catch (e) {
+    console.error("parseIds failed for value:", value, e)
+    return []
   }
+}
