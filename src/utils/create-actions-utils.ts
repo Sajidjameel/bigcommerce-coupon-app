@@ -149,86 +149,79 @@ export function DiscountSubtoatal(rule:ExtendedRule , apiRule:any){
         }
 }
 
-export function FixedPrice(rule :ExtendedRule,apiRule:any){
-     // Fixed price reward (unchanged)
-        apiRule.action.fixed_price_set = {
-            fixed_price: String(rule.config?.price || 0),
-            quantity: rule.config?.quantity || 1,
-            strategy: (rule.config?.applyTo || "Least expensive").toUpperCase().replace(" ", "_"),
-            exclude_items_on_sale: !(rule.config?.includeOnSale || false),
-            include_items_considered_by_condition: rule.config?.includeConditionProducts || false,
-            items: {},
-        }
+export function FixedPrice(rule: ExtendedRule, apiRule: any) {
+    apiRule.action.fixed_price_set = {
+        fixed_price: String(rule.config?.price || 0),
+        quantity: rule.config?.quantity || 1,
+        strategy: (rule.config?.applyTo || "Least expensive").toUpperCase().replace(" ", "_"),
+        exclude_items_on_sale: !(rule.config?.includeOnSale || false),
+        include_items_considered_by_condition: rule.config?.includeConditionProducts || false,
+    }
 
-        apiRule.apply_once = rule.config?.perCart !== "unlimited"
+    apiRule.apply_once = rule.config?.perCart !== "unlimited"
 
-        const conditions = []
+    const conditions: any[] = []
 
-        if (rule.config?.rewardInclusionRule) {
-            const inclusionItems = processInclusionRule(rule.config.rewardInclusionRule)
-            if (inclusionItems) {
-                if (inclusionItems.all) {
-                    conditions.push({ products: [1] })
-                } else if (inclusionItems.and) {
-                    conditions.push(...inclusionItems.and)
-                } else {
-                    conditions.push(inclusionItems)
-                }
+    if (rule.config?.rewardInclusionRule) {
+        const inclusionItems = processInclusionRule(rule.config.rewardInclusionRule)
+        if (inclusionItems) {
+            if (inclusionItems.all) {
+                //  Do nothing, means all products → no "items" property at all
+            } else if (inclusionItems.and) {
+                conditions.push(...inclusionItems.and)
+            } else {
+                conditions.push(inclusionItems)
             }
-        }
-
-        if (rule.config?.rewardExclusionRules?.length) {
-            const exclusionItems = processExclusionRules(rule.config.rewardExclusionRules)
-            if (exclusionItems) {
-                if (exclusionItems.and) {
-                    conditions.push({ not: { and: exclusionItems.and } })
-                } else {
-                    conditions.push({ not: exclusionItems })
-                }
-            }
-        }
-
-        // Process custom fields from config
-        if (rule.config?.customFields) {
-            apiRule.condition.cart.items.and = apiRule.condition.cart.items.and || []
-            rule.config.customFields.forEach((field) => {
-                // Extract exactly as shown in console examples
-                const customField = {
-                    product_custom_field: {
-                        name: field.name?.trim() || "",
-                        values: Array.isArray(field.values)
-                            ? field.values.map((v) => String(v).trim())
-                            : [String(field.values).trim()],
-                    },
-                }
-                apiRule.condition.cart.items.and.push(customField)
-            })
-        }
-
-        // Process product options from config
-        if (rule.config?.productOptions) {
-            apiRule.condition.cart.items.and = apiRule.condition.cart.items.and || []
-            rule.config.productOptions.forEach((option) => {
-                // Extract exactly as shown in console examples
-                const productOption = {
-                    product_option: {
-                        type: option.type || "string_match",
-                        name: option.name?.trim() || "",
-                        values: Array.isArray(option.values)
-                            ? option.values.map((v) => String(v).trim())
-                            : [String(option.values).trim()],
-                    },
-                }
-                apiRule.condition.cart.items.and.push(productOption)
-            })
-        }
-
-        if (conditions.length === 0) {
-            apiRule.action.fixed_price_set.items.products = [1]
-        } else if (conditions.length === 1) {
-            apiRule.action.fixed_price_set.items = conditions[0]
-        } else {
-            apiRule.action.fixed_price_set.items.and = conditions
         }
     }
 
+    if (rule.config?.rewardExclusionRules?.length) {
+        const exclusionItems = processExclusionRules(rule.config.rewardExclusionRules)
+        if (exclusionItems) {
+            if (exclusionItems.and) {
+                conditions.push({ not: { and: exclusionItems.and } })
+            } else {
+                conditions.push({ not: exclusionItems })
+            }
+        }
+    }
+
+    // Process custom fields from config
+    if (rule.config?.customFields) {
+        apiRule.condition.cart.items.and = apiRule.condition.cart.items.and || []
+        rule.config.customFields.forEach((field) => {
+            const customField = {
+                product_custom_field: {
+                    name: field.name?.trim() || "",
+                    values: Array.isArray(field.values)
+                        ? field.values.map((v) => String(v).trim())
+                        : [String(field.values).trim()],
+                },
+            }
+            apiRule.condition.cart.items.and.push(customField)
+        })
+    }
+
+    // Process product options from config
+    if (rule.config?.productOptions) {
+        apiRule.condition.cart.items.and = apiRule.condition.cart.items.and || []
+        rule.config.productOptions.forEach((option) => {
+            const productOption = {
+                product_option: {
+                    type: option.type || "string_match",
+                    name: option.name?.trim() || "",
+                    values: Array.isArray(option.values)
+                        ? option.values.map((v) => String(v).trim())
+                        : [String(option.values).trim()],
+                },
+            }
+            apiRule.condition.cart.items.and.push(productOption)
+        })
+    }
+
+    if (conditions.length === 1) {
+        apiRule.action.fixed_price_set.items = conditions[0]
+    } else if (conditions.length > 1) {
+        apiRule.action.fixed_price_set.items = { and: conditions }
+    }
+}

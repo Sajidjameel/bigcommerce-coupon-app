@@ -7,6 +7,10 @@ import Rules from "./rules/page";
 import UsageLimits from "./usage-limits/page";
 import Input from "@/components/UI/Input";
 import { useEffect, useRef } from "react";
+import React from "react"
+import ExcelJS from "exceljs"
+import { Download } from "lucide-react"
+
 
 export default function CouponGenerator() {
     const {
@@ -21,6 +25,8 @@ export default function CouponGenerator() {
         setSelectedChannelIds,
         showChannelModal,
         setShowChannelModal,
+        progress,
+        estimatedTime
     } = useCouponContext();
 
     const handleCheckboxChange = (channelId: number) => {
@@ -51,6 +57,36 @@ export default function CouponGenerator() {
     }, [selectedChannelIds]);
 
 
+    const handleDownload = async () => {
+        // 1. Create workbook and worksheet
+        const workbook = new ExcelJS.Workbook()
+        const sheet = workbook.addWorksheet("Coupons")
+
+        // 2. Add header row
+        sheet.addRow(["Coupon Code"])
+
+        // 3. Add data rows
+        couponCodes.forEach((code) => {
+            sheet.addRow([code])
+        })
+
+        // 4. Format header row (optional)
+        sheet.getRow(1).font = { bold: true }
+
+        // 5. Generate buffer
+        const buffer = await workbook.xlsx.writeBuffer()
+
+        // 6. Trigger download
+        const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
+        const url = window.URL.createObjectURL(blob)
+
+        const a = document.createElement("a")
+        a.href = url
+        a.download = "coupons.xlsx"
+        a.click()
+        window.URL.revokeObjectURL(url)
+    }
+
 
     return (
         <>
@@ -71,21 +107,52 @@ export default function CouponGenerator() {
                     />
 
                     <button
-                        className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition"
+                        className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition cursor-pointer"
                         onClick={generateCoupon}
                         disabled={loading}
-                    >
-                        {loading ? "Generating..." : "Generate Coupon"}
+
+                    >Generate Coupons
+                        {loading && (
+                            <div className="fixed inset-0 flex items-center justify-center bg-opacity-40 z-50">
+                                <div className="bg-white rounded-xl shadow-lg p-6 w-80 text-center">
+                                    <p className="text-lg font-semibold mb-3">Generating Coupons...</p>
+
+                                    <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
+                                        <div
+                                            className="bg-blue-600 h-2 transition-all duration-300"
+                                            style={{ width: `${progress}%` }}
+                                        />
+                                    </div>
+
+                                    <p className="mt-2 text-sm text-gray-600">{progress}% completed</p>
+
+                                    {estimatedTime !== null && (
+                                        <p className="mt-2 text-sm text-gray-500">
+                                            Estimated time: {estimatedTime} minute{estimatedTime > 1 ? 's' : ''}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
                     </button>
 
+                    {!loading && couponCodes.length > 0 && !error && (
+                        <div className="text-center text-green-700 font-semibold my-2">
+                            Successfully created {couponCodes.length} coupon{couponCodes.length > 1 ? "s" : ""}
+                        </div>
+                    )}
+
                     {couponCodes.length > 0 && (
-                        <div className="text-center text-green-600 font-medium space-y-1">
-                            ✅ Coupons Created:
-                            <ul className="mt-1 space-y-1">
-                                {couponCodes.map((c, i) => (
-                                    <li key={i} className="font-bold">{c}</li>
-                                ))}
-                            </ul>
+                        <div className="text-center font-bold space-y-1 flex items-center justify-center">
+                            Download Coupons:
+                            <button
+                                className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-2 justify-center ml-3  cursor-pointer"
+                                onClick={handleDownload}
+                                title="Download Coupons"
+                            >
+                               Coupons Code <Download size={20} /> 
+                            </button>
                         </div>
                     )}
 
@@ -94,6 +161,7 @@ export default function CouponGenerator() {
                             ⚠️ {error}
                         </div>
                     )}
+
 
                     {showChannelModal && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">

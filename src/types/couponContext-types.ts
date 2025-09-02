@@ -266,4 +266,6 @@ export interface CouponContextProps {
       >
     >,
   ) => void
+  progress: number
+  estimatedTime :number | null
 }

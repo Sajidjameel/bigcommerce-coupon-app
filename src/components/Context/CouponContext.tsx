@@ -19,6 +19,9 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
   const [showChannelModal, setShowChannelModal] = useState(false)
   const [selectedChannelIds, setSelectedChannelIds] = useState<string[]>(["0"]) // Default to channel 1
   const [selectedZoneIds, setSelectedZoneIds] = useState<Set<number>>(new Set())
+  const [progress, setProgress] = useState(0);
+  const [estimatedTime, setEstimatedTime] = useState<number | null>(null)
+
 
 
   const [formData, setFormData] = useState<CouponFormData>(formInitialValue)
@@ -138,51 +141,79 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
  
 
   // Update the generateCoupon function to properly convert UI selections to the BigCommerce API format
-  const generateCoupon = async () => {
-    setLoading(true)
-    setError(null)
-    setCouponCodes([])
+const generateCoupon = async () => {
+  setLoading(true)
+  setError(null)
+  setCouponCodes([])
+  setProgress(0)
 
+  const quantity = Math.max(1, Number(formData.quantity) || 1)
+
+  // ⏱ estimated time in seconds (1 coupon ≈ 1s)
+  const estimatedSeconds = quantity * 1
+  const estimatedMinutes = Math.ceil(estimatedSeconds / 60)
+
+  // store for UI
+  setEstimatedTime(estimatedMinutes)
+
+  const DEFAULT_PER_COUPON_MS = 9000 
+  let historicAvgMs = DEFAULT_PER_COUPON_MS
+  try {
+    const stored = localStorage.getItem("avgCouponMs")
+    if (stored) historicAvgMs = Math.max(200, Number(stored))
+  } catch {}
+
+  const expectedTotalMs = historicAvgMs * quantity
+  const start = performance.now()
+  const TICK_MS = 150
+  const interval = setInterval(() => {
+    const elapsed = performance.now() - start
+    const rawPercent = Math.min(98, Math.round((elapsed / expectedTotalMs) * 100))
+    setProgress((prev) => {
+      const next = Math.max(prev + 1, rawPercent)
+      return Math.min(98, next)
+    })
+  }, TICK_MS)
+
+  try {
+    const payload = preparePayload(formData, selectedChannelIds)
+    const response = await fetch("/api/coupons", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...payload,
+        quantity,
+      }),
+    })
+
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.error || "Failed to create coupon")
+
+    setCouponCodes(data.coupon || [])
+
+    const totalElapsed = performance.now() - start
+    const perCouponMs = totalElapsed / quantity
+    const newAvg = historicAvgMs * 0.8 + perCouponMs * 0.2
     try {
-      // Prepare the payload
-      const payload = preparePayload(formData,selectedChannelIds)
+      localStorage.setItem("avgCouponMs", String(newAvg))
+    } catch {}
 
-      const response = await fetch("/api/coupons", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...payload,
-          quantity: Number(formData.quantity),
-        }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to create coupon")
-      }
-      
-      // Log successful coupon generation with details
-      console.log("✅ Coupon generated successfully:", {
-        coupon: data.coupon,
-        payload: payload,
-        rules: payload.rules,
-        shippingZones: payload.rules.filter(rule => rule.action?.shipping?.zone_ids).map(rule => ({
-          zoneIds: rule.action.shipping.zone_ids,
-          zoneNames: rule.action.shipping.zone_names
-        }))
-      })
-
-      setCouponCodes(data.coupon || [])
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An unknown error occurred")
-      console.error("Coupon generation error:", err)
-    } finally {
-      setLoading(false)
-    }
+    clearInterval(interval)
+    setProgress(100)
+    await new Promise((r) => setTimeout(r, 500)) 
+  } catch (err) {
+    setError(err instanceof Error ? err.message : "An unknown error occurred")
+    clearInterval(interval)
+    setProgress(100)
+    await new Promise((r) => setTimeout(r, 500))
+  } finally {
+    clearInterval(interval)
+    setLoading(false)
   }
+}
+
+
+
 
   useEffect(() => {
     // Fetch channels when needed
@@ -226,7 +257,9 @@ export const CouponProvider = ({ children }: { children: React.ReactNode }) => {
         setSelectedCountries,
         updateSchedule,
         selectedZoneIds, 
-        setSelectedZoneIds
+        setSelectedZoneIds,
+        progress, 
+        estimatedTime,
       }}
     >
       {children}
