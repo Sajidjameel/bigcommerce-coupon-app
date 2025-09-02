@@ -89,45 +89,47 @@ export const processCondition = (condition: any): any => {
     return condition
 }
 
-export function preparePayload(formData: CouponFormData, selectedChannelIds: string[]){
+export function preparePayload(formData: CouponFormData, selectedChannelIds: string[]) {
     return {
-            name: formData.name || "New Coupon",
-            channels: selectedChannelIds[0] === "0" ? [] : selectedChannelIds.map((id) => ({ id: Number(id) })),
-    
-            codes: {
-              code: formData.codes || "",
-              max_uses_per_customer: formData.maxUsesPerCustomer || null,
-            },
-            created_from: "react_ui",
-            customer: {
-              group_ids: formData.customerGroupIds
+        name: formData.name || "New Coupon",
+        channels: selectedChannelIds[0] === "0" ? [] : selectedChannelIds.map((id) => ({ id: Number(id) })),
+
+        codes: {
+            code: formData.codes || "",
+            max_uses_per_customer: formData.maxUsesPerCustomer || null,
+        },
+        created_from: "react_ui",
+        customer: {
+            group_ids: formData.customerGroupIds
                 ? formData.customerGroupIds.split(",").map((id) => Number(id.trim()))
                 : [],
-              minimum_order_count: Number(formData.minOrderCount) || 0,
-              excluded_group_ids: formData.excludedCustomerGroupIds
+            minimum_order_count: Number(formData.minOrderCount) || 0,
+            excluded_group_ids: formData.excludedCustomerGroupIds
                 ? formData.excludedCustomerGroupIds.split(",").map((id) => Number(id.trim()))
                 : [],
-              segments: null,
-            },
-            rules: convertRules(formData.rules),
-            currency_code: formData.currencyCode || "GBP",
-            redemption_type: "COUPON",
-            shipping_address: formData.shipping_address,
-            current_uses: 0,
-            max_uses: formData.maxUses ? Number(formData.maxUses) : null,
-            start_date: formatDateWithTimezone(formData.startDate, formData.startTime),
-            end_date: formData.endDate ? formatDateWithTimezone(formData.endDate, formData.endTime) : null,
-            schedule: formData.limitAvailability
-              ? {
-                week_count: formData.weekCount,
-                selected_weekdays: formData.selectedWeekdays,
-                availability_start_time: formatTimeForSchedule(formData.availabilityStartTime),
-                availability_end_time: formatTimeForSchedule(formData.availabilityEndTime),
-              }
-              : null,
-            status: formData.status,
-            can_be_used_with_other_promotions: formData.canBeUsedWithOtherPromotions,
-            coupon_overrides_automatic_when_offering_higher_discounts: formData.overrideAutomatic,
-            display_name: formData.displayName,
-          }
+            segments: null,
+        },
+        rules: convertRules(formData.rules),
+        currency_code: formData.currencyCode || "GBP",
+        redemption_type: "COUPON",
+        shipping_address: formData.shipping_address,
+        current_uses: 0,
+        max_uses: formData.maxUses ? Number(formData.maxUses) : null,
+        start_date: formatDateWithTimezone(formData.startDate, formData.startTime),
+        end_date: formData.endDate ? formatDateWithTimezone(formData.endDate, formData.endTime) : null,
+        schedule: formData.limitAvailability
+            ? {
+                week_frequency: formData.weekCount,
+                week_days: formData.selectedWeekdays.map(
+                    day => day.charAt(0).toUpperCase() + day.slice(1).toLowerCase()
+                ),
+                daily_start_time: formatTimeForSchedule(formData.availabilityStartTime),
+                daily_end_time: formatTimeForSchedule(formData.availabilityEndTime),
+            }
+            : null,
+        status: formData.status,
+        can_be_used_with_other_promotions: formData.canBeUsedWithOtherPromotions,
+        coupon_overrides_automatic_when_offering_higher_discounts: formData.overrideAutomatic,
+        display_name: formData.displayName,
+    }
 }

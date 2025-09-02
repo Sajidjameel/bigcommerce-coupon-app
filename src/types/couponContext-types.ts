@@ -1,5 +1,5 @@
 import { Dispatch, SetStateAction } from "react"
-import { Rule, RuleType, RuleTypeId, TargetingRule } from "./rule-types"
+import { Rule, RuleTypeId, TargetingRule } from "./rule-types"
 import { DiscountType, RewardType, Status } from "./enum"
 
 export interface Country {

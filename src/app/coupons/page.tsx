@@ -138,7 +138,7 @@ export default function CouponGenerator() {
                     </button>
 
                     {!loading && couponCodes.length > 0 && !error && (
-                        <div className="text-center text-green-700 font-semibold my-2">
+                        <div className="text-center text-green-700 font-semibold my-2 text-lg">
                             Successfully created {couponCodes.length} coupon{couponCodes.length > 1 ? "s" : ""}
                         </div>
                     )}
@@ -158,7 +158,7 @@ export default function CouponGenerator() {
 
                     {error && (
                         <div className="text-center text-red-600">
-                            ⚠️ {error}
+                            {error}
                         </div>
                     )}
 
