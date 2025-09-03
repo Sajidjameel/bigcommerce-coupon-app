@@ -1,1 +1,2 @@
-## BigCommerce Coupon Application authentication complete
+## BigCommerce Coupon Application authentication and Home page complete
+
