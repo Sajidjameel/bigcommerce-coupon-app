@@ -7,7 +7,9 @@ import React from "react";
 export default function AuthPage() {
   const handleLogin = async () => {
     const res = await fetch("/api/auth/url");
+    console.log(res,'response')
     const { url } = await res.json();
+    console.log(url,'url')
     window.location.href = url;
   };
 
