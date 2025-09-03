@@ -1,1 +1,1 @@
-## BigCommerce Coupon Application authentication
+## BigCommerce Coupon Application authentication complete
