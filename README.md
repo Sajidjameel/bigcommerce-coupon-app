@@ -1,2 +1,3 @@
-## BigCommerce Coupon Application authentication and Home page complete
+## BigCommerce Coupon Application authentication and Home page complete and remove redirect
+
 
