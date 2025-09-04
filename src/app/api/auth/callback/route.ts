@@ -28,7 +28,7 @@ export async function GET(request: Request) {
     error: error || "No error"
   });
 
-  const dashboard_url = process.env.APP_URL + "/dashboard";
+  const dashboard_url = process.env.APP_URL!;
 
   // 🔹 Check existing token
   const cookieStore = await cookies();
