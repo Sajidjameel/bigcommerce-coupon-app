@@ -22,7 +22,7 @@ export default async function HomePage() {
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100">
             <div className={`w-3 h-3 rounded-full ${isConnected ? "bg-blue-600" : "bg-gray-100"}`} />
             <span className="text-sm font-bold text-gray-900">
-              {isConnected ? "BigCommerce Connected" : "Connect BigCommerce Store"}
+              {isConnected ? "BigCommerce Connected" : "BigCommerce Connected"}
             </span>
           </div>
         </div>
@@ -78,9 +78,9 @@ export default async function HomePage() {
 
         {/* CTA Button */}
         <div>
-          <Link href={isConnected ? "/coupons" : "/auth"}>
+          <Link href={isConnected ? "/coupons" : "/coupons"}>
             <button className="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-8 py-3 rounded-lg transition-colors cursor-pointer">
-              {isConnected ? "Start Creating Coupons" : "Connect Your Store"}
+              {isConnected ? "Start Creating Coupons" : "Start Creating Coupons"}
             </button>
           </Link>
           <p className="text-sm text-gray-100 mt-3 " >Trusted by 1,000+ BigCommerce stores worldwide</p>
