@@ -12,12 +12,12 @@ export async function middleware(request: NextRequest) {
     // Get cookies (can't use await cookies() here, must use request.cookies)
     const token = request.cookies.get('bigcommerce_access_token');
 
-    if (!token) {
-        console.log(token, 'token')
-      const url = request.nextUrl.clone();
-      url.pathname = '/auth';
-      return NextResponse.redirect(url);
-    }
+    // if (!token) {
+    //     console.log(token, 'token')
+    //   const url = request.nextUrl.clone();
+    //   url.pathname = '/auth';
+    //   return NextResponse.redirect(url);
+    // }
   }
 
   // Continue to the requested page
