@@ -36,9 +36,9 @@ export async function GET(request: Request) {
 
   // ✅ If no code but token exists, redirect to dashboard
   if (!code || !account_uuid) {
-    // if (existingToken) {
-    //   return NextResponse.redirect(dashboard_url);
-    // }
+    if (existingToken) {
+      return NextResponse.redirect(dashboard_url);
+    }
     
     return NextResponse.json(
       { 
