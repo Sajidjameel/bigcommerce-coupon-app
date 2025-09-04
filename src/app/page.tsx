@@ -20,7 +20,7 @@ export default async function HomePage() {
 
           {/* Connection Status */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100">
-            <div className={`w-3 h-3 rounded-full ${isConnected ? "bg-blue-600" : "bg-gray-100"}`} />
+            <div className={`w-3 h-3 rounded-full ${isConnected ? "bg-blue-600" : "bg-blue-600"}`} />
             <span className="text-sm font-bold text-gray-900">
               {isConnected ? "BigCommerce Connected" : "BigCommerce Connected"}
             </span>
