@@ -3,12 +3,12 @@ import Link from 'next/link';
 import { cookies } from "next/headers"
 
 export default async function HomePage() {
-  const token = (await cookies()).get("bigcommerce_access_token")
-  const isConnected = !!token?.value
+const cookieStore = await cookies();
+  const token = cookieStore.get("bigcommerce_access_token");
+  
+  const isConnected = !!token?.value;
 
-  console.log(token,'token')
-  // localStorage.setItem('token', token?.value!)
-
+  console.log('Token:', token?.value);
 
   return (
     <div className="h-screen bg-gray-900 flex items-center justify-center overflow-hidden">

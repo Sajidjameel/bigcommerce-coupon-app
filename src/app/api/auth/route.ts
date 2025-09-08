@@ -54,5 +54,5 @@ export async function GET(req: Request) {
     expiresIn: data.expires_in
   });
 
-  return NextResponse.redirect(`${process.env.APP_URL}/app?store=${storeHash || accountUuid}`);
+  return NextResponse.redirect(`${process.env.APP_URL}/?store=${storeHash || accountUuid}`);
 }
