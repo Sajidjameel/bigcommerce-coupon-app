@@ -1,11 +1,9 @@
 // src/app/api/shippingdestination/route.ts
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
 export async function GET() {
-    const token = (await cookies()).get("bigcommerce_access_token")
   const BIGCOMMERCE_STORE_HASH = process.env.BIGCOMMERCE_STORE_HASH;
-  const BIGCOMMERCE_ACCESS_TOKEN = token?.value;
+  const BIGCOMMERCE_ACCESS_TOKEN = process.env.BIGCOMMERCE_ACCESS_TOKEN;
 
   if (!BIGCOMMERCE_STORE_HASH || !BIGCOMMERCE_ACCESS_TOKEN) {
     return NextResponse.json(

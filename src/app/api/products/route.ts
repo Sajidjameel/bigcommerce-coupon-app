@@ -1,4 +1,3 @@
-import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 
 // Define types for API response data
@@ -32,8 +31,6 @@ interface ApiResponse {
  */
 export async function GET(request: Request) {
   console.log("Server: Fetching products...")
-  const token = (await cookies()).get("bigcommerce_access_token")
-  
 
   // Extract query parameters
   const { searchParams } = new URL(request.url)
@@ -42,7 +39,7 @@ export async function GET(request: Request) {
 
   // Get BigCommerce credentials from environment variables
   const BIGCOMMERCE_STORE_HASH = process.env.BIGCOMMERCE_STORE_HASH
-  const BIGCOMMERCE_ACCESS_TOKEN = token?.value
+  const BIGCOMMERCE_ACCESS_TOKEN = process.env.BIGCOMMERCE_ACCESS_TOKEN
 
   // Validate credentials
   if (!BIGCOMMERCE_STORE_HASH || !BIGCOMMERCE_ACCESS_TOKEN) {
