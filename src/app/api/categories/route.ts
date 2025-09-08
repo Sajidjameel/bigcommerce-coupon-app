@@ -1,9 +1,12 @@
 // app/api/categories/route.ts
+import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
+    const token = (await cookies()).get("bigcommerce_access_token")
+  
   const BIGCOMMERCE_STORE_HASH = process.env.BIGCOMMERCE_STORE_HASH;
-  const BIGCOMMERCE_ACCESS_TOKEN = process.env.BIGCOMMERCE_ACCESS_TOKEN;
+  const BIGCOMMERCE_ACCESS_TOKEN = token?.value;
 
   if (!BIGCOMMERCE_STORE_HASH || !BIGCOMMERCE_ACCESS_TOKEN) {
     return NextResponse.json(
@@ -22,7 +25,7 @@ export async function GET(request: Request) {
       {
         method: 'GET',
         headers: {
-          'X-Auth-Token': BIGCOMMERCE_ACCESS_TOKEN,
+          'X-Auth-Token': BIGCOMMERCE_ACCESS_TOKEN || '',
           'Accept': 'application/json',
           'Content-Type': 'application/json'
         }

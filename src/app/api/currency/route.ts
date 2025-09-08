@@ -1,10 +1,17 @@
+import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
 export async function GET() {
+  const token = (await cookies()).get("bigcommerce_access_token")
+const cookieStore = await cookies();
+  const storeHash = cookieStore.get("bigcommerce_store_hash")?.value;
+
+  console.log("🔍 Retrieved store hash from cookies:", storeHash);
  // console.log("Fetching currencies..."); // Log to confirm that the endpoint is being hit
 
-  const BIGCOMMERCE_STORE_HASH = process.env.BIGCOMMERCE_STORE_HASH;
-  const BIGCOMMERCE_ACCESS_TOKEN = process.env.BIGCOMMERCE_ACCESS_TOKEN;
+  const BIGCOMMERCE_STORE_HASH = storeHash;
+  const BIGCOMMERCE_ACCESS_TOKEN = token?.value;
+  console.log(token?.value,'currency token')
 
   if (!BIGCOMMERCE_STORE_HASH || !BIGCOMMERCE_ACCESS_TOKEN) {
     console.error("Missing BigCommerce credentials");

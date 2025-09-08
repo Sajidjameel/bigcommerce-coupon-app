@@ -3,17 +3,17 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
 export async function GET(request: Request) {
-   console.log("🎯 CALLBACK ROUTE EXECUTING NOW!");
-  
-  
+  console.log("🎯 CALLBACK ROUTE EXECUTING NOW!");
+
+
   const url = new URL(request.url);
-  
+
   // Log ALL parameters for debugging
   const allParams: Record<string, string> = {};
   url.searchParams.forEach((value, key) => {
     allParams[key] = value;
   });
-  
+
 
   // BigCommerce sends 'code' and 'account_uuid' (not 'context')
   const code = url.searchParams.get("code");
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
 
   console.log("🔍 Extracted Parameters:", {
     code: code ? "✅ Present" : "❌ Missing",
-    account_uuid: account_uuid ? "✅ Present" : "❌ Missing",
+    account_uuid: account_uuid ? account_uuid : "❌ Missing",
     scope: scope || "No scope",
     error: error || "No error"
   });
@@ -39,10 +39,10 @@ export async function GET(request: Request) {
     if (existingToken) {
       return NextResponse.redirect(dashboard_url);
     }
-    
+
     return NextResponse.json(
-      { 
-        error: "Missing auth code or account_uuid", 
+      {
+        error: "Missing auth code or account_uuid",
         receivedParams: allParams,
         expected: ["code", "account_uuid"]
       },
@@ -84,10 +84,10 @@ export async function GET(request: Request) {
   });
 
   try {
-    
+
     const response = await fetch("https://login.bigcommerce.com/oauth2/token", {
       method: "POST",
-      headers: { 
+      headers: {
         "Content-Type": "application/json",
         "User-Agent": "BigCommerce OAuth Client"
       },
@@ -116,24 +116,34 @@ export async function GET(request: Request) {
         path: "/",
         maxAge: 60 * 60 * 24 * 30, // 30 days
       });
+      (await cookies()).set("bigcommerce_store_hash", store_hash, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 30, // 30 days
+      });
+      console.log("🍪 Store hash saved in cookie:", store_hash);
+
+
 
       // ✅ Redirect to dashboard on success
       return NextResponse.redirect(dashboard_url);
 
     } else {
       console.log("❌ Token exchange failed:", data);
-      
+
       // ✅ If OAuth fails but token exists, redirect to dashboard
       if (existingToken) {
         console.log("🔁 Redirecting to dashboard (existing token despite failure)");
         return NextResponse.redirect(dashboard_url);
       }
-      
+
       return NextResponse.json(
-        { 
-          error: "Token exchange failed", 
+        {
+          error: "Token exchange failed",
           details: data,
-          status: response.status 
+          status: response.status
         },
         { status: 400 }
       );
@@ -142,10 +152,10 @@ export async function GET(request: Request) {
   } catch (error) {
     console.log("❌ Step 3 Failed: OAuth request failed");
     console.error("Error details:", error);
-    
+
     return NextResponse.json(
-      { 
-        error: "OAuth request failed", 
+      {
+        error: "OAuth request failed",
         details: (error as Error).message
       },
       { status: 500 }

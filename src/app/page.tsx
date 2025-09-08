@@ -6,6 +6,8 @@ export default async function HomePage() {
   const token = (await cookies()).get("bigcommerce_access_token")
   const isConnected = !!token?.value
 
+  console.log(token,'token')
+  // localStorage.setItem('token', token?.value!)
 
 
   return (
@@ -20,7 +22,7 @@ export default async function HomePage() {
 
           {/* Connection Status */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100">
-            <div className={`w-3 h-3 rounded-full ${isConnected ? "bg-blue-600" : "bg-blue-600"}`} />
+            <div className={`w-3 h-3 rounded-full ${isConnected ? "bg-blue-600" : "bg-green-600"}`} />
             <span className="text-sm font-bold text-gray-900">
               {isConnected ? "BigCommerce Connected" : "BigCommerce Connected"}
             </span>
@@ -78,9 +80,9 @@ export default async function HomePage() {
 
         {/* CTA Button */}
         <div>
-          <Link href={isConnected ? "/coupons" : "/coupons"}>
+          <Link href={isConnected ? "/coupons" : "/auth"}>
             <button className="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-8 py-3 rounded-lg transition-colors cursor-pointer">
-              {isConnected ? "Start Creating Coupons" : "Start Creating Coupons"}
+              {isConnected ? "Start Creating Coupons" : "Login"}
             </button>
           </Link>
           <p className="text-sm text-gray-100 mt-3 " >Trusted by 1,000+ BigCommerce stores worldwide</p>
