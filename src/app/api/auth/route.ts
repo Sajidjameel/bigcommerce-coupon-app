@@ -7,23 +7,13 @@ export async function GET(req: Request) {
   const context = searchParams.get("context");
   const scope = searchParams.get("scope");
   const accountUuid = searchParams.get("account_uuid");
-  const error = searchParams.get("error");
 
   console.log("OAuth callback params:", Object.fromEntries(searchParams));
 
-  if (error) {
-    console.error("❌ OAuth error received:", error, searchParams.get("error_description"));
-    return NextResponse.redirect(
-      `${process.env.APP_URL}/auth-error?error=${error}&description=${encodeURIComponent(searchParams.get('error_description') || 'Unknown error')}`
-    );
-  }
-
   if (!code) {
-    console.error("❌ Missing authorization code. Query params:", Object.fromEntries(searchParams));
-    return NextResponse.redirect(
-      `${process.env.APP_URL}/auth-error?error=no_code&description=${encodeURIComponent('No authorization code received from BigCommerce')}`
-    );
+    return NextResponse.json({ error: "Missing authorization code" }, { status: 400 });
   }
+  
 
   // ✅ Exchange code for access token
   const res = await fetch("https://login.bigcommerce.com/oauth2/token", {
@@ -35,18 +25,16 @@ export async function GET(req: Request) {
       code,
       scope,
       grant_type: "authorization_code",
-      redirect_uri: process.env.AUTH_CALLBACK_URL,
+      redirect_uri: process.env.AUTH_CALLBACK_URL, // ← MUST MATCH EXACTLY
       ...(context ? { context } : {}),
     }),
   });
 
   if (!res.ok) {
-      const errorText = await res.text();
-      console.error("❌ Token exchange failed. Status:", res.status, "Response:", errorText);
-      return NextResponse.redirect(
-        `${process.env.APP_URL}/auth-error?error=token_exchange_failed&status=${res.status}`
-      );
-    }
+    const errorData = await res.json();
+    console.error("❌ Token exchange failed:", errorData);
+    return NextResponse.json({ error: "Token exchange failed", details: errorData }, { status: 400 });
+  }
 
   const data = await res.json();
   console.log("✅ OAuth token response:", data);
