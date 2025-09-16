@@ -91,7 +91,7 @@ export async function GET(req: Request) {
 
     // Redirect to dashboard
     return NextResponse.redirect(
-      new URL(`/dashboard?store=${storeHash}`, process.env.APP_URL || "http://localhost:3000")
+      new URL(`/dashboard?store=${storeHash}`, process.env.APP_URL)
     );
 
   } catch (error) {
