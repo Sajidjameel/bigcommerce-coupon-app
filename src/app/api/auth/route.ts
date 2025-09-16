@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
+  const cookieStore = cookies();
 
   const code = searchParams.get("code");
   const context = searchParams.get("context");
@@ -13,7 +15,6 @@ export async function GET(req: Request) {
   if (!code) {
     return NextResponse.json({ error: "Missing authorization code" }, { status: 400 });
   }
-  
 
   // ✅ Exchange code for access token
   const res = await fetch("https://login.bigcommerce.com/oauth2/token", {
@@ -25,7 +26,7 @@ export async function GET(req: Request) {
       code,
       scope,
       grant_type: "authorization_code",
-      redirect_uri: process.env.AUTH_CALLBACK_URL, // ← MUST MATCH EXACTLY
+      redirect_uri: process.env.AUTH_CALLBACK_URL,
       ...(context ? { context } : {}),
     }),
   });
@@ -39,7 +40,6 @@ export async function GET(req: Request) {
   const data = await res.json();
   console.log("✅ OAuth token response:", data);
 
-  // ✅ Derive store hash
   let storeHash: string | undefined;
   if (data?.context) {
     storeHash = data.context.replace("stores/", "");
@@ -47,13 +47,27 @@ export async function GET(req: Request) {
     storeHash = context.replace("stores/", "");
   }
 
-  // TODO: Save access_token, store_hash, and refresh_token securely
-  console.log("💾 Should save:", {
-    accessToken: data.access_token,
-    storeHash: storeHash,
-    refreshToken: data.refresh_token,
-    expiresIn: data.expires_in
+  if (data.access_token) {
+    (await cookieStore).set("bigcommerce_access_token", data.access_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 60 * 60 * 24 * 7, // 1 week
+    });
+  }
+
+  const storeIdentifier = storeHash || accountUuid;
+  if (storeIdentifier) {
+    (await cookieStore).set("bigcommerce_store_hash", storeIdentifier, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 60 * 60 * 24 * 7, // 1 week
+    });
+  }
+
+  console.log("💾 Saved to cookies:", {
+    accessToken: !!data.access_token,
+    storeHash: storeIdentifier
   });
 
-  return NextResponse.redirect(`${process.env.APP_URL}/?store=${storeHash || accountUuid}`);
+  return NextResponse.redirect(`${process.env.APP_URL}/dashboard?store=${storeIdentifier}`);
 }
