@@ -5,13 +5,27 @@ import Image from "next/image";
 import React from "react";
 
 export default function AuthPage() {
-  const handleLogin = async () => {
-    const res = await fetch("/api/auth/start");
-    console.log(res,'response')
-    const { url } = await res.json();
-    console.log(url,'url')
-    window.location.href = url;
+
+   const handleLogin = async () => {
+    try {
+      const res = await fetch("/api/auth/start");
+      console.log(res, 'response');
+      
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      
+      const { url } = await res.json();
+      console.log(url, 'url');
+      
+      window.open(url, '_blank', 'noopener,noreferrer');
+      
+    } catch (error) {
+      console.error('Login failed:', error);
+      alert('Login failed. Please try again or contact support.');
+    }
   };
+
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
