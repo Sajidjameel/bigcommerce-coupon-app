@@ -8,7 +8,9 @@ export default function Dashboard() {
     const router = useRouter(); // ✅ Next.js router for navigation
 
     useEffect(() => {
-        fetch("/api/get-token")
+        fetch("/api/get-token",{
+            credentials: "include"
+        })
             .then((res) => res.json())
             .then((data) => {
                 if (data.token) {
