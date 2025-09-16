@@ -80,7 +80,7 @@ const cookieStore = await cookies();
 
         {/* CTA Button */}
         <div>
-          <Link href={isConnected ? "/coupons" : "/login"}>
+          <Link href={isConnected ? "/coupons" : "/auth"}>
             <button className="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-8 py-3 rounded-lg transition-colors cursor-pointer">
               {isConnected ? "Start Creating Coupons" : "Login"}
             </button>
