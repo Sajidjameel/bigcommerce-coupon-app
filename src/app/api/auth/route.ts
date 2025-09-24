@@ -114,7 +114,7 @@ export async function GET(req: Request) {
 
     // Redirect to dashboard
     return NextResponse.redirect(
-      new URL(`/dashboard?store=${storeHash || "unknown"}`, process.env.APP_URL)
+      new URL(`/?store=${storeHash || "unknown"}`, process.env.APP_URL)
     );
   } catch (error) {
     console.error("❌ Unexpected error during OAuth flow:", error);
