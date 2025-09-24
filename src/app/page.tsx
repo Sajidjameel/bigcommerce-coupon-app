@@ -3,11 +3,6 @@ import { cookies } from "next/headers";
 
 export default async function HomePage() {
   const cookieStore = await cookies();
-  const getAllCookies = cookieStore.getAll();
-
-  console.log("🍪 ALL COOKIES:", getAllCookies.map(c => ({ name: c.name, value: c.value ? "PRESENT" : "MISSING" })));
-  
-
   const token = cookieStore.get("bigcommerce_access_token");
   const storeHash = cookieStore.get("bigcommerce_store_hash");
 

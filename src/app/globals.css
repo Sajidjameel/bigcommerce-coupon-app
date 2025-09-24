@@ -32,6 +32,9 @@ body {
 .btn {
   @apply w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition;
 }
+.login-form-container{
+  @apply bg-gray-700
+}
 
 /* Make number input spinners show pointer cursor on hover (WebKit browsers) */
 input[type="number"]::-webkit-inner-spin-button {
