@@ -94,7 +94,7 @@ export async function GET(req: Request) {
       console.error("❌ No store hash could be determined.");
     }
 
-    console.log("➡️ Redirecting to dashboard...");
+    console.log("➡️ Redirecting to home page...");
     return NextResponse.redirect(
       new URL(`/?store=${storeHash || "unknown"}`, process.env.APP_URL)
     );
