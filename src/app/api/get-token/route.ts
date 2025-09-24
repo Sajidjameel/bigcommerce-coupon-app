@@ -1,13 +1,34 @@
-import { cookies } from "next/headers";
+// app/api/get-token/route.ts
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 export async function GET() {
-  const cookieStore = cookies();
-  const token = (await cookieStore).get("bigcommerce_access_token")?.value || null;
+  try {
+    const cookieStore = await cookies();
+    
+    const token = cookieStore.get("bigcommerce_access_token")?.value;
+    const storeHash = cookieStore.get("bigcommerce_store_hash")?.value;
 
-  if (!token) {
-    return NextResponse.json({ token: null }, { status: 200 });
+    console.log("🔍 Token check:", { hasToken: !!token, hasStoreHash: !!storeHash });
+
+    if (!token || !storeHash) {
+      return NextResponse.json(
+        { error: "Not authenticated" },
+        { status: 401 }
+      );
+    }
+
+    return NextResponse.json({
+      token,
+      storeHash,
+      status: "connected"
+    });
+
+  } catch (error) {
+    console.error("❌ Error fetching token:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
-
-  return NextResponse.json({ token }, { status: 200 });
 }
