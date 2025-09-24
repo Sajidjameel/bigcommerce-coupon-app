@@ -8,19 +8,22 @@ export default function Dashboard() {
     const router = useRouter(); // ✅ Next.js router for navigation
 
     useEffect(() => {
-        fetch("/api/get-token",{
-            credentials: "include"
-        })
-            .then((res) => res.json())
-            .then((data) => {
-                if (data.token) {
-                    localStorage.setItem("bigcommerce_access_token", data.token); // Store in localStorage for quick access
-                    setToken(data.token);
-                }
-            })
-            .catch((err) => console.error("Error fetching token:", err));
-    }, []);
-
+    fetch("/api/get-token", { credentials: "include" })
+    .then(async (res) => {
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Request failed: ${res.status} ${text}`);
+      }
+      return res.json();
+    })
+    .then((data) => {
+      if (data?.token) {
+        localStorage.setItem("bigcommerce_access_token", data.token);
+        setToken(data.token);
+      }
+    })
+    .catch((err) => console.error("Error fetching token:", err));
+}, []);
 
     return (
         <div className="flex flex-col items-center justify-center min-h-screen p-4">

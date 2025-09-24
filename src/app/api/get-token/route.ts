@@ -1,16 +1,13 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-export async function POST(req: Request) {
-  const { token } = await req.json();
+export async function GET() {
+  const cookieStore = cookies();
+  const token = (await cookieStore).get("bigcommerce_access_token")?.value || null;
 
-  const response = NextResponse.json({ success: true });
+  if (!token) {
+    return NextResponse.json({ token: null }, { status: 200 });
+  }
 
-  response.cookies.set("bigcommerce_access_token", token, {
-    httpOnly: true,  
-    secure: process.env.NODE_ENV === "production", 
-    sameSite: "lax",
-    path: "/",
-  });
-
-  return response;
+  return NextResponse.json({ token }, { status: 200 });
 }

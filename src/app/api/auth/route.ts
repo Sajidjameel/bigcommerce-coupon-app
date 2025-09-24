@@ -8,13 +8,11 @@ export async function GET(req: Request) {
   const code = searchParams.get("code");
   const context = searchParams.get("context");
   const scope = searchParams.get("scope");
-  const accountUuid = searchParams.get("account_uuid");
 
   console.log("🔍 OAuth callback received with params:", {
     code: code ? "PRESENT" : "MISSING",
     context,
     scope,
-    accountUuid
   });
 
   // Debug: Log all query parameters
@@ -23,10 +21,10 @@ export async function GET(req: Request) {
   if (!code) {
     console.error("❌ Missing authorization code. Full query:", Object.fromEntries(searchParams));
     return NextResponse.json(
-      { 
+      {
         error: "Missing authorization code",
-        receivedParams: Object.fromEntries(searchParams)
-      }, 
+        receivedParams: Object.fromEntries(searchParams),
+      },
       { status: 400 }
     );
   }
@@ -57,15 +55,40 @@ export async function GET(req: Request) {
     }
 
     const data = await tokenResponse.json();
-    console.log("✅ OAuth token response received");
+    console.log("✅ Full OAuth token response:", data);
 
     let storeHash: string | undefined;
-    if (data?.context) {
+
+    if (data.context) {
+      // Standard install flow → store hash comes from context
       storeHash = data.context.replace("stores/", "");
-    } else if (context) {
-      storeHash = context.replace("stores/", "");
-    } else if (accountUuid) {
-      storeHash = accountUuid;
+      console.log("✅ Store hash from context:", storeHash);
+    } else {
+      // Fallback: fetch store info with the new access token
+      console.warn("⚠️ No context in token response, fetching store info...");
+      const storeInfoRes = await fetch("https://api.bigcommerce.com/stores/v2/store", {
+        headers: {
+          "X-Auth-Token": data.access_token,
+          "Accept": "application/json",
+        },
+      });
+
+      if (!storeInfoRes.ok) {
+        const storeErr = await storeInfoRes.text();
+        console.error("❌ Failed to fetch store info:", storeErr);
+      } else {
+        const storeInfo = await storeInfoRes.json();
+        console.log("✅ Store Info API response:", storeInfo);
+
+        // Try common fields
+        storeHash = storeInfo?.store_hash || storeInfo?.id;
+      }
+
+      // Last-resort fallback: use .env default
+      if (!storeHash && process.env.BIGCOMMERCE_STORE_HASH) {
+        storeHash = process.env.BIGCOMMERCE_STORE_HASH;
+        console.warn("⚠️ Using fallback store hash from ENV:", storeHash);
+      }
     }
 
     // Set cookies
@@ -73,7 +96,7 @@ export async function GET(req: Request) {
       (await cookieStore).set("bigcommerce_access_token", data.access_token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        maxAge: 60 * 60 * 24 * 7,
+        maxAge: 60 * 60 * 24 * 7, // 7 days
         path: "/",
       });
     }
@@ -91,13 +114,15 @@ export async function GET(req: Request) {
 
     // Redirect to dashboard
     return NextResponse.redirect(
-      new URL(`/dashboard?store=${storeHash}`, process.env.APP_URL)
+      new URL(`/dashboard?store=${storeHash || "unknown"}`, process.env.APP_URL)
     );
-
   } catch (error) {
     console.error("❌ Unexpected error during OAuth flow:", error);
     return NextResponse.json(
-      { error: "Internal server error", details: error instanceof Error ? error.message : "Unknown error" },
+      {
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
       { status: 500 }
     );
   }
