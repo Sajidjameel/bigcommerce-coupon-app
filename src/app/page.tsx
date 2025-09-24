@@ -1,14 +1,16 @@
-import { link } from "fs"
-import Link from 'next/link';
-import { cookies } from "next/headers"
+import Link from "next/link";
+import { cookies } from "next/headers";
 
 export default async function HomePage() {
-const cookieStore = await cookies();
+  const cookieStore = await cookies();
+
   const token = cookieStore.get("bigcommerce_access_token");
-  
+  const storeHash = cookieStore.get("bigcommerce_store_hash");
+
   const isConnected = !!token?.value;
 
-  console.log('Token:', token?.value);
+  console.log("🔑 Access Token:", token?.value);
+  console.log("🏬 Store Hash:", storeHash?.value);
 
   return (
     <div className="h-screen bg-gray-900 flex items-center justify-center overflow-hidden">
@@ -22,7 +24,11 @@ const cookieStore = await cookies();
 
           {/* Connection Status */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100">
-            <div className={`w-3 h-3 rounded-full ${isConnected ? "bg-blue-600" : "bg-green-600"}`} />
+            <div
+              className={`w-3 h-3 rounded-full ${
+                isConnected ? "bg-blue-600" : "bg-green-600"
+              }`}
+            />
             <span className="text-sm font-bold text-gray-900">
               {isConnected ? "BigCommerce Connected" : "BigCommerce not connected"}
             </span>
@@ -33,7 +39,12 @@ const cookieStore = await cookies();
         <div className="grid grid-cols-3 gap-8 mb-8">
           <div className="text-center">
             <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg
+                className="w-8 h-8 text-blue-700"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -50,7 +61,12 @@ const cookieStore = await cookies();
 
           <div className="text-center">
             <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg
+                className="w-8 h-8 text-blue-700"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -67,8 +83,18 @@ const cookieStore = await cookies();
 
           <div className="text-center">
             <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              <svg
+                className="w-8 h-8 text-blue-700"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 10V3L4 14h7v7l9-11h-7z"
+                />
               </svg>
             </div>
             <h3 className="text-lg font-semibold text-gray-100 mb-2">Bulk Generation</h3>
@@ -85,9 +111,11 @@ const cookieStore = await cookies();
               {isConnected ? "Start Creating Coupons" : "Login"}
             </button>
           </Link>
-          <p className="text-sm text-gray-100 mt-3 " >Trusted by 1,000+ BigCommerce stores worldwide</p>
+          <p className="text-sm text-gray-100 mt-3">
+            Trusted by 1,000+ BigCommerce stores worldwide
+          </p>
         </div>
       </div>
     </div>
-  )
+  );
 }
