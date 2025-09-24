@@ -9,17 +9,17 @@ export async function GET(req: Request) {
   const context = searchParams.get("context");
   const scope = searchParams.get("scope");
 
-  console.log("🔍 OAuth callback received with params:", {
+  console.log("🔍 OAuth callback received:", {
     code: code ? "PRESENT" : "MISSING",
     context,
     scope,
   });
 
-  // Debug: Log all query parameters
-  console.log("📋 All query parameters:", Object.fromEntries(searchParams));
+  // Debug: log all query parameters
+  console.log("📋 Query params:", Object.fromEntries(searchParams));
 
   if (!code) {
-    console.error("❌ Missing authorization code. Full query:", Object.fromEntries(searchParams));
+    console.error("❌ Missing authorization code.");
     return NextResponse.json(
       {
         error: "Missing authorization code",
@@ -55,43 +55,23 @@ export async function GET(req: Request) {
     }
 
     const data = await tokenResponse.json();
-    console.log("✅ Full OAuth token response:", data);
+    console.log("✅ OAuth token response:", data);
 
     let storeHash: string | undefined;
 
+    // Extract store hash from context if present
     if (data.context) {
-      // Standard install flow → store hash comes from context
       storeHash = data.context.replace("stores/", "");
       console.log("✅ Store hash from context:", storeHash);
-    } else {
-      // Fallback: fetch store info with the new access token
-      console.warn("⚠️ No context in token response, fetching store info...");
-      const storeInfoRes = await fetch("https://api.bigcommerce.com/stores/v2/store", {
-        headers: {
-          "X-Auth-Token": data.access_token,
-          "Accept": "application/json",
-        },
-      });
-
-      if (!storeInfoRes.ok) {
-        const storeErr = await storeInfoRes.text();
-        console.error("❌ Failed to fetch store info:", storeErr);
-      } else {
-        const storeInfo = await storeInfoRes.json();
-        console.log("✅ Store Info API response:", storeInfo);
-
-        // Try common fields
-        storeHash = storeInfo?.store_hash || storeInfo?.id;
-      }
-
-      // Last-resort fallback: use .env default
-      if (!storeHash && process.env.BIGCOMMERCE_STORE_HASH) {
-        storeHash = process.env.BIGCOMMERCE_STORE_HASH;
-        console.warn("⚠️ Using fallback store hash from ENV:", storeHash);
-      }
     }
 
-    // Set cookies
+    // Fallback: use ENV if context missing
+    if (!storeHash && process.env.BIGCOMMERCE_STORE_HASH) {
+      storeHash = process.env.BIGCOMMERCE_STORE_HASH;
+      console.warn("⚠️ Using fallback store hash from ENV:", storeHash);
+    }
+
+    // Save cookies
     if (data.access_token) {
       (await cookieStore).set("bigcommerce_access_token", data.access_token, {
         httpOnly: true,
@@ -99,6 +79,7 @@ export async function GET(req: Request) {
         maxAge: 60 * 60 * 24 * 7, // 7 days
         path: "/",
       });
+      console.log("💾 Saved access token to cookies.");
     }
 
     if (storeHash) {
@@ -108,11 +89,12 @@ export async function GET(req: Request) {
         maxAge: 60 * 60 * 24 * 7,
         path: "/",
       });
+      console.log("💾 Saved store hash to cookies.");
+    } else {
+      console.error("❌ No store hash could be determined.");
     }
 
-    console.log("💾 Authentication successful. Redirecting to dashboard...");
-
-    // Redirect to dashboard
+    console.log("➡️ Redirecting to dashboard...");
     return NextResponse.redirect(
       new URL(`/?store=${storeHash || "unknown"}`, process.env.APP_URL)
     );
