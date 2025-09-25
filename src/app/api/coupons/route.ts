@@ -32,7 +32,7 @@ async function createCouponCode(promotionId: number, code: string, accessToken: 
 
 export async function POST(req: Request): Promise<NextResponse> {
   try {
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const accessToken = cookieStore.get("bigcommerce_access_token")?.value || process.env.BIGCOMMERCE_ACCESS_TOKEN
     const STORE_HASH = cookieStore.get('bigcommerce_store_hash')?.value
 
