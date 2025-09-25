@@ -2,6 +2,10 @@ import { NextResponse } from "next/server"
 import crypto from "crypto"
 import { cookies } from "next/headers"
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 // Helper function to generate a unique code
 async function generateUniqueCode(): Promise<string> {
   return crypto.randomBytes(5).toString("hex").toUpperCase()
