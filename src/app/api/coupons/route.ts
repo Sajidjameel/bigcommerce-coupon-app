@@ -2,9 +2,9 @@ import { NextResponse } from "next/server"
 import crypto from "crypto"
 import { cookies } from "next/headers"
 
-// Force dynamic rendering
-export const dynamic = 'force-dynamic'
-export const runtime = 'nodejs'
+// ENV VARS
+const STORE_HASH = process.env.BIGCOMMERCE_STORE_HASH!
+const BASE_URL = `https://api.bigcommerce.com/stores/${STORE_HASH}/v3/promotions`
 
 // Helper function to generate a unique code
 async function generateUniqueCode(): Promise<string> {
@@ -12,7 +12,7 @@ async function generateUniqueCode(): Promise<string> {
 }
 
 // Helper function to create a coupon code
-async function createCouponCode(promotionId: number, code: string, accessToken: string, storeHash: string): Promise<any> {
+async function createCouponCode(promotionId: number, code: string, accessToken: string): Promise<any> {
   const couponPayload = {
     code: code,
     max_uses: null,
@@ -20,7 +20,7 @@ async function createCouponCode(promotionId: number, code: string, accessToken: 
   }
   console.log("Creating coupon code with payload:", JSON.stringify(couponPayload, null, 2))
   const couponResponse = await fetch(
-    `https://api.bigcommerce.com/stores/${storeHash}/v3/promotions/${promotionId}/codes`,
+    `https://api.bigcommerce.com/stores/${STORE_HASH}/v3/promotions/${promotionId}/codes`,
     {
       method: "POST",
       headers: {
@@ -34,17 +34,16 @@ async function createCouponCode(promotionId: number, code: string, accessToken: 
   return await couponResponse.json()
 }
 
+// Update the POST handler to properly handle the dynamic rules from the UI
 export async function POST(req: Request): Promise<NextResponse> {
   try {
-    const cookieStore = await cookies()
-    const accessToken = cookieStore.get("bigcommerce_access_token")?.value || process.env.BIGCOMMERCE_ACCESS_TOKEN
-    const STORE_HASH = cookieStore.get('bigcommerce_store_hash')?.value
+    const cookieStore = cookies()
+    const accessToken =
+      (await cookieStore).get("bigcommerce_access_token")?.value || process.env.BIGCOMMERCE_ACCESS_TOKEN
 
-    if (!accessToken || !STORE_HASH) {
-      return NextResponse.json({ error: "Missing access token or store hash. Please log in again." }, { status: 401 })
+    if (!accessToken) {
+      return NextResponse.json({ error: "Missing access token. Please log in again." }, { status: 401 })
     }
-
-    const BASE_URL = `https://api.bigcommerce.com/stores/${STORE_HASH}/v3/promotions`
 
     const body = await req.json()
     console.log("Received request body:", JSON.stringify(body, null, 2))
@@ -244,7 +243,7 @@ export async function POST(req: Request): Promise<NextResponse> {
       }
 
       const promotionId = data.data.id
-      const couponResponse = await createCouponCode(promotionId, code, accessToken, STORE_HASH)
+      const couponResponse = await createCouponCode(promotionId, code, accessToken)
 
       if (!couponResponse.data?.id) {
         console.error("Failed to create coupon code:", couponResponse)
