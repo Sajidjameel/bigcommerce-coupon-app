@@ -64,7 +64,7 @@ export async function GET(req: Request) {
     const cookieStore = await cookies();
 
     // Set cookies (secure + iframe compatible)
-    cookieStore.set("bigcommerce_access_token", data.access_token, {
+    cookieStore.set(" ", data.access_token, {
       httpOnly: true,
       secure: true,
       sameSite: "none",

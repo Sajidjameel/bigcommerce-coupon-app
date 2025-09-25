@@ -5,12 +5,8 @@ import { NextResponse } from 'next/server'
 export async function GET() {
 
   const cookiesStore = await cookies();
-
-
   const BIGCOMMERCE_STORE_HASH = cookiesStore.get('bigcommerce_store_hash')?.value;
   const BIGCOMMERCE_ACCESS_TOKEN = cookiesStore.get('bigcommerce_access_token')?.value;
-
- 
 
   if (!BIGCOMMERCE_STORE_HASH || !BIGCOMMERCE_ACCESS_TOKEN) {
     console.error('MISSING CREDENTIALS ERROR')
