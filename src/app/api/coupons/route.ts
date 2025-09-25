@@ -2,8 +2,10 @@ import { NextResponse } from "next/server"
 import crypto from "crypto"
 import { cookies } from "next/headers"
 
-// ENV VARS
-const STORE_HASH = process.env.BIGCOMMERCE_STORE_HASH!
+const cookiesStore = await cookies();
+
+
+const STORE_HASH = cookiesStore.get('bigcommerce_store_hash')?.value;
 const BASE_URL = `https://api.bigcommerce.com/stores/${STORE_HASH}/v3/promotions`
 
 // Helper function to generate a unique code

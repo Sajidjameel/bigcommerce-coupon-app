@@ -1,9 +1,8 @@
 import { cookies } from "next/headers";
 
 export async function GET() {
-    const storeHash = process.env.BIGCOMMERCE_STORE_HASH;
     const cookieStore = await cookies();
-    // const accessToken = process.env.BIGCOMMERCE_ACCESS_TOKEN;
+    const storeHash = cookieStore.get('bigcommerce_store_hash')?.value;
     const accessToken = cookieStore.get("bigcommerce_access_token")?.value;
 
     if (!storeHash || !accessToken) {

@@ -1,9 +1,14 @@
 // src/app/api/brands/route.ts
+import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
-  const BIGCOMMERCE_STORE_HASH = process.env.BIGCOMMERCE_STORE_HASH
-  const BIGCOMMERCE_ACCESS_TOKEN = process.env.BIGCOMMERCE_ACCESS_TOKEN
+
+  const cookiesStore = await cookies();
+
+
+  const BIGCOMMERCE_STORE_HASH = cookiesStore.get('bigcommerce_store_hash')?.value;
+  const BIGCOMMERCE_ACCESS_TOKEN = cookiesStore.get('bigcommerce_access_token')?.value;
 
  
 
