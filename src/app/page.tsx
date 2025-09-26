@@ -12,10 +12,6 @@ export default async function HomePage() {
   console.log("🔑 Access Token:", token?.value);
   console.log("🏬 Store Hash:", storeHash?.value);
 
-    if (!token?.value || !storeHash?.value) {
-    redirect("/auth"); // if missing → restart auth flow
-  }
-   
 
 
   return (
