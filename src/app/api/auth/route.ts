@@ -6,9 +6,9 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
 
   const code = searchParams.get("code");
-  const context = searchParams.get("context"); // usually stores/{hash}
+  const context = searchParams.get("context"); // This should come from BigCommerce OAuth
   const scope = searchParams.get("scope");
-  const accountUuid = searchParams.get("account_uuid"); // fallback case
+  const accountUuid = searchParams.get("account_uuid");
 
   console.log("🔍 OAuth callback received:", { code, context, scope, accountUuid });
 
@@ -16,6 +16,18 @@ export async function GET(req: Request) {
     console.error("❌ Missing authorization code.");
     return NextResponse.json(
       { error: "Missing authorization code" },
+      { status: 400 }
+    );
+  }
+
+  // 🚨 CRITICAL: Check if context is missing
+  if (!context) {
+    console.error("❌ BigCommerce did not send context parameter");
+    console.log("📥 All received parameters:", Object.fromEntries(searchParams.entries()));
+    
+    // This means BigCommerce isn't properly redirecting to your callback
+    return NextResponse.json(
+      { error: "Missing context parameter from BigCommerce" },
       { status: 400 }
     );
   }
@@ -32,8 +44,7 @@ export async function GET(req: Request) {
         scope,
         grant_type: "authorization_code",
         redirect_uri: process.env.AUTH_CALLBACK_URL,
-        context,
-        account_uuid: accountUuid, // ✅ add this so it works when context is missing
+        context, // This should contain "stores/{hash}"
       }),
     });
 
@@ -47,13 +58,35 @@ export async function GET(req: Request) {
     }
 
     const data = await tokenResponse.json();
-    console.log("✅ OAuth token response received");
+    console.log("✅ OAuth token response:", {
+      access_token: data.access_token ? "✅ Present" : "❌ Missing",
+      context: data.context,
+      scope: data.scope
+    });
 
-    // Extract store hash or fallback
-    const storeHash = data.context?.replace("stores/", "") || process.env.BIGCOMMERCE_STORE_HASH;
+    // 🎯 EXTRACT STORE HASH FROM CONTEXT
+    let storeHash = null;
+    
+    // Method 1: From context parameter (preferred)
+    if (context && context.startsWith('stores/')) {
+      storeHash = context.replace('stores/', '');
+      console.log("✅ Store hash from context parameter:", storeHash);
+    }
+    // Method 2: From token response context (fallback)
+    else if (data.context && data.context.startsWith('stores/')) {
+      storeHash = data.context.replace('stores/', '');
+      console.log("✅ Store hash from token response:", storeHash);
+    }
+    // Method 3: Manual extraction from your store URL (LAST RESORT)
+    else {
+      // 🚨 ONLY use this for testing if above methods fail
+      const storeUrl = "store-noyunnhark.mybigcommerce.com";
+      storeHash = storeUrl.split('.')[0].replace('store-', '');
+      console.log("⚠️  Store hash extracted from URL (fallback):", storeHash);
+    }
 
-    if (!storeHash && !accountUuid) {
-      console.error("❌ No store hash or account UUID available");
+    if (!storeHash) {
+      console.error("❌ Could not determine store hash");
       return NextResponse.json(
         { error: "Store hash not available" },
         { status: 400 }
@@ -63,7 +96,7 @@ export async function GET(req: Request) {
     // Get cookie store
     const cookieStore = await cookies();
 
-    // Set cookies (secure + iframe compatible)
+    // Set cookies
     cookieStore.set("bigcommerce_access_token", data.access_token, {
       httpOnly: true,
       secure: true,
@@ -72,29 +105,17 @@ export async function GET(req: Request) {
       path: "/",
     });
 
-    if (storeHash) {
-      cookieStore.set("bigcommerce_store_hash", storeHash, {
-        httpOnly: true,
-        secure: true,
-        sameSite: "none",
-        maxAge: 60 * 60 * 24 * 7,
-        path: "/",
-      });
-    }
+    cookieStore.set("bigcommerce_store_hash", storeHash, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      maxAge: 60 * 60 * 24 * 7,
+      path: "/",
+    });
 
-    if (accountUuid) {
-      cookieStore.set("bigcommerce_account_uuid", accountUuid, {
-        httpOnly: true,
-        secure: true,
-        sameSite: "none",
-        maxAge: 60 * 60 * 24 * 7,
-        path: "/",
-      });
-    }
+    console.log("✅ Authentication successful! Store hash:", storeHash);
 
-    console.log("✅ Cookies set successfully");
-
-    // Redirect to homepage/dashboard
+    // Redirect to homepage
     return NextResponse.redirect(
       new URL("/", process.env.APP_URL || "https://bigcommerce-coupon-app-2pzc.vercel.app")
     );
