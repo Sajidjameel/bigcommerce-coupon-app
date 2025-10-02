@@ -1,155 +1,134 @@
-// app/page.tsx
-import Link from "next/link";
-import { cookies } from "next/headers";
+"use client";
 
-async function checkAuthentication() {
-  try {
-    const cookieStore = await cookies();
-    const storeHash = cookieStore.get("store_hash")?.value;
+import Image from "next/image";
+import React, { useEffect, useState } from "react";
+
+export default function AuthPage() {
+  const [loading, setLoading] = useState(false);
+  const [storeHash, setStoreHash] = useState<string | null>(null);
+
+  // Auto-detect store hash from BigCommerce installation context
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const storeHashFromUrl = urlParams.get('store_hash');
+    const contextFromUrl = urlParams.get('context');
     
-    console.log("🔍 Home Page - Store hash from cookies:", storeHash);
+    console.log('🔍 Auto-detecting store hash from URL parameters:');
+    console.log('   - store_hash:', storeHashFromUrl);
+    console.log('   - context:', contextFromUrl);
 
-    if (!storeHash) {
-      return { 
-        isConnected: false,
-        error: "No store connection found" 
-      };
+    // Extract store hash from context (format: stores/{store_hash})
+    let extractedStoreHash = storeHashFromUrl;
+    if (contextFromUrl && contextFromUrl.startsWith('stores/')) {
+      extractedStoreHash = contextFromUrl.replace('stores/', '');
+      console.log('   - Extracted from context:', extractedStoreHash);
     }
 
-    // Verify the store data exists and get access token info
-    const baseUrl = process.env.APP_URL || 'https://bigcommerce-coupon-app-2pzc.vercel.app';
-    const verifyResponse = await fetch(`${baseUrl}/api/auth/verify`, {
-      cache: 'no-store'
-    });
+    if (extractedStoreHash) {
+      console.log('✅ Store hash detected:', extractedStoreHash);
+      setStoreHash(extractedStoreHash);
+      // Auto-start OAuth if store hash is provided by BigCommerce
+      handleLogin(extractedStoreHash);
+    } else {
+      console.log('❌ No store hash detected in URL parameters');
+    }
+  }, []);
 
-    if (verifyResponse.ok) {
-      const storeData = await verifyResponse.json();
-      console.log("✅ Store data verified:", storeData.storeHash);
+  const handleLogin = async (detectedStoreHash?: string) => {
+    setLoading(true);
+    
+    try {
+      let apiUrl = '/api/auth/install';
       
-      // Test if access token works with BigCommerce API
-      const tokenTestResponse = await fetch(`${baseUrl}/api/test-token`, {
-        cache: 'no-store'
-      });
-      
-      let tokenWorks = false;
-      let storeName = '';
-      
-      if (tokenTestResponse.ok) {
-        const testData = await tokenTestResponse.json();
-        tokenWorks = testData.tokenWorks;
-        storeName = testData.storeInfo?.name;
+      if (detectedStoreHash) {
+        apiUrl += `?store_hash=${encodeURIComponent(detectedStoreHash)}`;
+        console.log('🚀 Starting OAuth with store hash:', detectedStoreHash);
+      } else {
+        console.log('🚀 Starting OAuth without store hash');
       }
       
-      return { 
-        isConnected: true,
-        storeHash: storeData.storeHash,
-        userEmail: storeData.user?.email,
-        hasAccessToken: storeData.hasAccessToken,
-        tokenWorks: tokenWorks,
-        storeName: storeName
-      };
-    } else {
-      console.log("❌ Store verification failed");
-      return { 
-        isConnected: false,
-        error: "Store verification failed" 
-      };
+      const res = await fetch(apiUrl);
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to start installation');
+      }
+      
+      const data = await res.json();
+      console.log('✅ Redirect URL received:', data.url);
+      
+      if (data.url) {
+        // Redirect to BigCommerce OAuth
+        window.location.href = data.url;
+      } else {
+        throw new Error('No redirect URL received from server');
+      }
+      
+    } catch (error) {
+      console.error('❌ Authentication error:', error);
+      alert(error instanceof Error ? error.message : 'Authentication failed. Please check the console.');
+    } finally {
+      setLoading(false);
     }
+  };
 
-  } catch (error) {
-    console.error("Auth check error:", error);
-    return { 
-      isConnected: false,
-      error: "Authentication check failed" 
-    };
-  }
-}
-
-export default async function HomePage() {
-  const authData = await checkAuthentication();
-  const isConnected = authData.isConnected;
-
-  console.log("🏠 Home Page Status:", authData);
+  const handleManualInstall = () => {
+    console.log('👤 User manually clicked Install button');
+    handleLogin(); // Call without store hash
+  };
 
   return (
-    <div className="h-screen bg-gray-900 flex items-center justify-center overflow-hidden">
-      <div className="max-w-4xl mx-auto px-6 text-center">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-5xl font-bold text-white mb-4">BigCommerce Coupon Generator</h1>
-          <p className="text-xl text-gray-100 mb-6">
-            Create powerful discount campaigns that drive sales and boost customer loyalty
-          </p>
+    <main className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
+      <div className="bg-white shadow-lg rounded-xl p-8 w-full max-w-md text-center">
+        <Image
+          src="https://cdn11.bigcommerce.com/s-123456/images/stencil/original/logo.svg"
+          alt="BigCommerce App"
+          width={200}
+          height={50}
+          className="mx-auto h-12 w-auto mb-6"
+        />
 
-          {/* Connection Status */}
-          <div className="space-y-2 mb-4">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100">
-              <div
-                className={`w-3 h-3 rounded-full ${
-                  isConnected ? "bg-green-600" : "bg-red-600"
-                }`}
-              />
-              <span className="text-sm font-bold text-gray-900">
-                {isConnected ? `Connected to ${authData.storeHash}` : "BigCommerce not connected"}
-              </span>
+        <h1 className="text-2xl font-semibold text-gray-800 mb-4">
+          {storeHash ? 'Installing App...' : 'Install BigCommerce App'}
+        </h1>
+        
+        <p className="text-gray-500 mb-6">
+          {storeHash 
+            ? `Installing on store: ${storeHash}`
+            : 'Click below to install this app on your BigCommerce store.'
+          }
+        </p>
+
+        {!storeHash && (
+          <button
+            onClick={handleManualInstall}
+            disabled={loading}
+            className="w-full bg-[#203239] hover:bg-[#1a262c] disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-3 px-6 rounded-lg font-medium transition-colors duration-200"
+          >
+            {loading ? "Installing..." : "Install App"}
+          </button>
+        )}
+
+        {storeHash && loading && (
+          <div className="w-full bg-[#203239] text-white py-3 px-6 rounded-lg font-medium">
+            <div className="flex items-center justify-center">
+              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Auto-installing...
             </div>
-            
-            {isConnected && (
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100">
-                <div
-                  className={`w-3 h-3 rounded-full ${
-                    authData.tokenWorks ? "bg-green-600" : "bg-yellow-600"
-                  }`}
-                />
-                <span className="text-sm font-bold text-gray-900">
-                  {authData.tokenWorks 
-                    ? `Access Token Active • ${authData.storeName || 'Store Connected'}`
-                    : "Access Token Status: Checking..."
-                  }
-                </span>
-              </div>
-            )}
           </div>
-          
-          {isConnected && authData.userEmail && (
-            <p className="text-sm text-gray-300">
-              Logged in as: {authData.userEmail}
-            </p>
-          )}
+        )}
 
-          {isConnected && (
-            <div className="mt-4 p-3 bg-blue-900 rounded-lg">
-              <p className="text-sm text-blue-100">
-                <strong>Access Token Status:</strong> {authData.hasAccessToken ? '✅ Stored in Upstash' : '❌ Not found'}
-                {authData.tokenWorks && ' • ✅ Working with BigCommerce API'}
-              </p>
-            </div>
-          )}
-
-          {!isConnected && authData.error && (
-            <p className="text-sm text-red-300">
-              Error: {authData.error}
-            </p>
-          )}
-        </div>
-
-        {/* Your existing benefits grid and CTA button */}
-        <div className="grid grid-cols-3 gap-8 mb-8">
-          {/* ... your existing benefits grid ... */}
-        </div>
-
-        {/* CTA Button */}
-        <div>
-          <Link href={isConnected ? "/coupons" : "/auth"}>
-            <button className="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-8 py-3 rounded-lg transition-colors cursor-pointer">
-              {isConnected ? "Start Creating Coupons" : "Connect BigCommerce Store"}
-            </button>
-          </Link>
-          <p className="text-sm text-gray-100 mt-3">
-            Trusted by 1,000+ BigCommerce stores worldwide
-          </p>
-        </div>
+        <p className="text-xs text-gray-400 mt-6">
+          By installing, you agree to our{" "}
+          <a href="/terms" className="underline hover:text-gray-500">
+            Terms of Service
+          </a>
+          .
+        </p>
       </div>
-    </div>
+    </main>
   );
 }
