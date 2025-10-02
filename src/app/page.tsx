@@ -1,18 +1,110 @@
+// app/page.tsx
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+
+async function checkAuthentication() {
+  try {
+    const cookieStore = await cookies();
+    const storeHash = cookieStore.get("store_hash")?.value;
+    
+    console.log("🔍 Home Page - Store hash from cookies:", storeHash);
+
+    if (!storeHash) {
+      return { 
+        isConnected: false,
+        error: "No store hash found" 
+      };
+    }
+
+    // Verify the access token is valid by making an API call
+    const verifyResponse = await fetch(`${process.env.APP_URL || 'http://localhost:3000'}/api/auth/verify`, {
+      cache: 'no-store',
+      headers: {
+        'Cookie': `store_hash=${storeHash}`
+      }
+    });
+
+    if (verifyResponse.ok) {
+      const storeData = await verifyResponse.json();
+      console.log("✅ Access token is valid:", { 
+        storeHash: storeData.storeHash,
+        userEmail: storeData.user?.email 
+      });
+      
+      return { 
+        isConnected: true,
+        storeHash: storeData.storeHash,
+        userEmail: storeData.user?.email,
+        accessTokenValid: true
+      };
+    } else {
+      const errorData = await verifyResponse.json();
+      console.log("❌ Access token invalid:", errorData);
+      return { 
+        isConnected: false,
+        error: errorData.error || "Token verification failed" 
+      };
+    }
+
+  } catch (error) {
+    console.error("Auth check error:", error);
+    return { 
+      isConnected: false,
+      error: "Authentication service unavailable" 
+    };
+  }
+}
+
+// Function to test the access token with BigCommerce API
+async function testAccessToken(storeHash: string) {
+  try {
+    const testResponse = await fetch(`${process.env.APP_URL || 'http://localhost:3000'}/api/test-token`, {
+      cache: 'no-store',
+      headers: {
+        'Cookie': `store_hash=${storeHash}`
+      }
+    });
+
+    if (testResponse.ok) {
+      const testData = await testResponse.json();
+      return {
+        tokenWorks: true,
+        storeName: testData.storeInfo?.name,
+        apiTest: true
+      };
+    } else {
+      return {
+        tokenWorks: false,
+        apiTest: false
+      };
+    }
+  } catch (error) {
+    console.error("Token test error:", error);
+    return {
+      tokenWorks: false,
+      apiTest: false,
+      error: "API test failed"
+    };
+  }
+}
 
 export default async function HomePage() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("bigcommerce_access_token");
-  const storeHash = cookieStore.get("bigcommerce_store_hash");
+  const authData = await checkAuthentication();
+  const isConnected = authData.isConnected;
+  
+  let tokenTestResult = null;
+  if (isConnected && authData.storeHash) {
+    tokenTestResult = await testAccessToken(authData.storeHash);
+  }
 
-  const isConnected = !!token?.value;
-
-  console.log("🔑 Access Token:", token?.value);
-  console.log("🏬 Store Hash:", storeHash?.value);
-
-
+  console.log("🏠 Home Page Status:", { 
+    isConnected, 
+    storeHash: authData.storeHash,
+    userEmail: authData.userEmail,
+    accessTokenValid: authData.accessTokenValid,
+    tokenWorks: tokenTestResult?.tokenWorks,
+    storeName: tokenTestResult?.storeName
+  });
 
   return (
     <div className="h-screen bg-gray-900 flex items-center justify-center overflow-hidden">
@@ -25,16 +117,45 @@ export default async function HomePage() {
           </p>
 
           {/* Connection Status */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 mb-4">
             <div
               className={`w-3 h-3 rounded-full ${
-                isConnected ? "bg-blue-600" : "bg-green-600"
+                isConnected ? "bg-green-600" : "bg-red-600"
               }`}
             />
             <span className="text-sm font-bold text-gray-900">
-              {isConnected ? "BigCommerce Connected" : "BigCommerce not connected"}
+              {isConnected ? `Connected to ${authData.storeHash}` : "BigCommerce not connected"}
             </span>
           </div>
+          
+          {/* Access Token Status */}
+          {isConnected && (
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 mb-2">
+              <div
+                className={`w-3 h-3 rounded-full ${
+                  tokenTestResult?.tokenWorks ? "bg-green-600" : "bg-yellow-600"
+                }`}
+              />
+              <span className="text-sm font-bold text-gray-900">
+                {tokenTestResult?.tokenWorks 
+                  ? `Access Token Active • ${tokenTestResult.storeName || 'Store Connected'}`
+                  : "Access Token Needs Refresh"
+                }
+              </span>
+            </div>
+          )}
+          
+          {isConnected && authData.userEmail && (
+            <p className="text-sm text-gray-300 mt-2">
+              Logged in as: {authData.userEmail}
+            </p>
+          )}
+
+          {!isConnected && authData.error && (
+            <p className="text-sm text-red-300 mt-2">
+              Error: {authData.error}
+            </p>
+          )}
         </div>
 
         {/* Benefits Grid */}
@@ -110,7 +231,7 @@ export default async function HomePage() {
         <div>
           <Link href={isConnected ? "/coupons" : "/auth"}>
             <button className="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-8 py-3 rounded-lg transition-colors cursor-pointer">
-              {isConnected ? "Start Creating Coupons" : "Login"}
+              {isConnected ? "Start Creating Coupons" : "Connect BigCommerce Store"}
             </button>
           </Link>
           <p className="text-sm text-gray-100 mt-3">

@@ -66,7 +66,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     console.log('   - Saved user email:', savedData.user.email);
 
     // Redirect to app dashboard
-    const redirectUrl = `${request.nextUrl.origin}/dashboard`;
+    const redirectUrl = `${request.nextUrl.origin}/`;
     console.log('🔄 STEP 4: Redirecting to dashboard:', redirectUrl);
 
     const response = NextResponse.redirect(redirectUrl);

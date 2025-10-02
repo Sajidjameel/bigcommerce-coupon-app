@@ -1,26 +1,32 @@
-// app/api/get-token/route.ts
-import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { NextRequest, NextResponse } from 'next/server';
+import { getStoreData } from '@/app/lib/db';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    
-    const token = cookieStore.get("bigcommerce_access_token")?.value;
-    const storeHash = cookieStore.get("bigcommerce_store_hash")?.value;
+    const storeHash = request.cookies.get('store_hash')?.value;
 
-    console.log("🔍 Token check:", { hasToken: !!token, hasStoreHash: !!storeHash });
+    console.log("🔍 Get Token - Store hash:", storeHash);
 
-    if (!token || !storeHash) {
+    if (!storeHash) {
       return NextResponse.json(
         { error: "Not authenticated" },
         { status: 401 }
       );
     }
 
+    const storeData = await getStoreData(storeHash);
+
+    if (!storeData) {
+      return NextResponse.json(
+        { error: "Store data not found" },
+        { status: 404 }
+      );
+    }
+
     return NextResponse.json({
-      token,
-      storeHash,
+      token: storeData.accessToken,
+      storeHash: storeData.storeHash,
+      user: storeData.user,
       status: "connected"
     });
 
