@@ -1,5 +1,7 @@
+// app/api/auth/install/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { bigcommerceConfig } from '@/app/lib/bigcommerce';
+import { saveState, getState } from '@/app/lib/db'; // We'll create this
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const { searchParams } = new URL(request.url);
@@ -15,7 +17,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     client_id: bigcommerceConfig.clientId,
     redirect_uri: bigcommerceConfig.authCallback,
     response_type: 'code',
-    scope: 'store_v2_information store_v2_products',
+    scope: 'store_v2_information store_v2_products', // Basic scopes for testing
     state: state,
   };
 
@@ -23,34 +25,23 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   if (storeHash && storeHash !== '[object Object]' && storeHash.length > 3) {
     authParams.context = `stores/${storeHash}`;
     console.log('✅ Including store hash in OAuth context:', storeHash);
-  } else {
-    console.log('ℹ️ No valid store hash provided - BigCommerce will provide it in callback');
   }
 
   const authUrl = `${bigcommerceConfig.loginUrl}/oauth2/authorize?` + new URLSearchParams(authParams);
 
   console.log('🔗 OAuth URL generated');
-  console.log('   - Store Hash provided:', storeHash || 'None');
   console.log('   - State:', state);
-  console.log('   - Redirect URI:', bigcommerceConfig.authCallback);
 
-  // Create JSON response instead of redirect
-  const response = NextResponse.json({ 
+  // Store state in Upstash Redis instead of cookies
+  await saveState(state, {
+    storeHash: storeHash,
+    timestamp: new Date().toISOString()
+  });
+
+  console.log('✅ State saved to Upstash:', state);
+
+  return NextResponse.json({ 
     url: authUrl,
-    storeHashProvided: !!storeHash
+    state: state // For debugging
   });
-
-  // Store state in httpOnly cookie for verification
-  // Use sameSite: 'none' and proper domain for cross-origin
-  response.cookies.set('oauth_state', state, {
-    httpOnly: true,
-    secure: true, // Must be true for HTTPS
-    sameSite: 'none', // Allow cross-origin
-    maxAge: 60 * 10, // 10 minutes
-    path: '/', // Available on all paths
-  });
-
-  console.log('✅ State cookie set:', state);
-
-  return response;
 }

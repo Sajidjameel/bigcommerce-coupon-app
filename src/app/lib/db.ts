@@ -137,3 +137,39 @@ export async function testUpstashConnection(): Promise<boolean> {
     return false;
   }
 }
+
+export async function saveState(state: string, data: any): Promise<void> {
+  try {
+    // Store state with 10 minute expiration
+    await redis.set(`oauth_state:${state}`, JSON.stringify(data), { ex: 60 * 10 });
+    console.log(`✅ State saved: ${state}`);
+  } catch (error) {
+    console.error('❌ Error saving state:', error);
+    throw new Error('Failed to save state');
+  }
+}
+
+/**
+ * Get OAuth state from Upstash Redis
+ */
+export async function getState(state: string): Promise<any> {
+  try {
+    const data = await redis.get(`oauth_state:${state}`);
+    return data ? JSON.parse(data as string) : null;
+  } catch (error) {
+    console.error('❌ Error getting state:', error);
+    return null;
+  }
+}
+
+/**
+ * Delete used OAuth state
+ */
+export async function deleteState(state: string): Promise<void> {
+  try {
+    await redis.del(`oauth_state:${state}`);
+    console.log(`✅ State deleted: ${state}`);
+  } catch (error) {
+    console.error('❌ Error deleting state:', error);
+  }
+}
