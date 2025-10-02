@@ -9,6 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@upstash/redis": "^1.35.4",
+    "@vercel/kv": "^3.0.0",
     "axios": "^1.11.0",
     "bigcommerce-api-client": "^0.7.19",
     "exceljs": "^4.4.0",
