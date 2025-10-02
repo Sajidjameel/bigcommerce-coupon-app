@@ -1,129 +1,86 @@
 "use client";
 
-import Image from "next/image";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 
 export default function AuthPage() {
   const [loading, setLoading] = useState(false);
-  const [storeHash, setStoreHash] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Auto-detect store hash from BigCommerce installation context
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const storeHashFromUrl = urlParams.get('store_hash');
-    const contextFromUrl = urlParams.get('context');
-    
-    console.log('🔍 Auto-detecting store hash from URL parameters:');
-    console.log('   - store_hash:', storeHashFromUrl);
-    console.log('   - context:', contextFromUrl);
-
-    // Extract store hash from context (format: stores/{store_hash})
-    let extractedStoreHash = storeHashFromUrl;
-    if (contextFromUrl && contextFromUrl.startsWith('stores/')) {
-      extractedStoreHash = contextFromUrl.replace('stores/', '');
-      console.log('   - Extracted from context:', extractedStoreHash);
-    }
-
-    if (extractedStoreHash) {
-      console.log('✅ Store hash detected:', extractedStoreHash);
-      setStoreHash(extractedStoreHash);
-      // Auto-start OAuth if store hash is provided by BigCommerce
-      handleLogin(extractedStoreHash);
-    } else {
-      console.log('❌ No store hash detected in URL parameters');
-    }
-  }, []);
-
-  const handleLogin = async (detectedStoreHash?: string) => {
+  // The BigCommerce App Store install redirects DIRECTLY to /api/auth/callback.
+  // This page is for users who come from a manual external link and need to start the OAuth flow.
+  
+  const handleLogin = async () => {
     setLoading(true);
+    setError(null);
     
     try {
-      let apiUrl = '/api/auth/install';
-      
-      if (detectedStoreHash) {
-        apiUrl += `?store_hash=${encodeURIComponent(detectedStoreHash)}`;
-        console.log('🚀 Starting OAuth with store hash:', detectedStoreHash);
-      } else {
-        console.log('🚀 Starting OAuth without store hash');
-      }
-      
-      const res = await fetch(apiUrl);
+      // Call the server route to generate the full BigCommerce OAuth URL
+      const res = await fetch('/api/auth/install'); 
       
       if (!res.ok) {
+        // Attempt to parse JSON error message from the server
         const errorData = await res.json();
-        throw new Error(errorData.error || 'Failed to start installation');
+        throw new Error(errorData.error || 'Failed to start installation on server.');
       }
       
       const data = await res.json();
-      console.log('✅ Redirect URL received:', data.url);
       
       if (data.url) {
-        // Redirect to BigCommerce OAuth
+        // Redirect the user to the BigCommerce authorization page
         window.location.href = data.url;
       } else {
-        throw new Error('No redirect URL received from server');
+        throw new Error('Server did not return a valid redirect URL.');
       }
       
-    } catch (error) {
-      console.error('❌ Authentication error:', error);
-      alert(error instanceof Error ? error.message : 'Authentication failed. Please check the console.');
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred. Check server logs.';
+      console.error('❌ Manual Authentication error:', e);
+      setError(errorMessage);
     } finally {
+      // Note: In case of successful redirect, this 'finally' block is often skipped, 
+      // but it handles cases where the fetch fails immediately.
       setLoading(false);
     }
   };
 
-  const handleManualInstall = () => {
-    console.log('👤 User manually clicked Install button');
-    handleLogin(); // Call without store hash
-  };
-
   return (
     <main className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
-      <div className="bg-white shadow-lg rounded-xl p-8 w-full max-w-md text-center">
-        <Image
-          src="https://cdn11.bigcommerce.com/s-123456/images/stencil/original/logo.svg"
+      <div className="bg-white shadow-xl rounded-2xl p-8 w-full max-w-md text-center border border-gray-200">
+        {/* Replaced Next.js Image component with standard HTML img tag */}
+        <img
+          src="https://placehold.co/200x50/1a262c/ffffff?text=BC+App+Logo"
           alt="BigCommerce App"
           width={200}
           height={50}
-          className="mx-auto h-12 w-auto mb-6"
+          className="mx-auto h-12 w-auto mb-6 rounded-lg"
         />
 
-        <h1 className="text-2xl font-semibold text-gray-800 mb-4">
-          {storeHash ? 'Installing App...' : 'Install BigCommerce App'}
+        <h1 className="text-2xl font-bold text-gray-800 mb-2">
+          Install BigCommerce App
         </h1>
         
         <p className="text-gray-500 mb-6">
-          {storeHash 
-            ? `Installing on store: ${storeHash}`
-            : 'Click below to install this app on your BigCommerce store.'
-          }
+          Ready to supercharge your store? Click below to install and authorize this application.
         </p>
-
-        {!storeHash && (
-          <button
-            onClick={handleManualInstall}
-            disabled={loading}
-            className="w-full bg-[#203239] hover:bg-[#1a262c] disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-3 px-6 rounded-lg font-medium transition-colors duration-200"
-          >
-            {loading ? "Installing..." : "Install App"}
-          </button>
-        )}
-
-        {storeHash && loading && (
-          <div className="w-full bg-[#203239] text-white py-3 px-6 rounded-lg font-medium">
-            <div className="flex items-center justify-center">
-              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Auto-installing...
+        
+        {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+                <p className="font-bold">Installation Error</p>
+                <p className="text-sm">{error}</p>
             </div>
-          </div>
         )}
+
+        <button
+          onClick={handleLogin}
+          disabled={loading}
+          className="w-full bg-[#203239] hover:bg-[#1a262c] active:scale-[.99] transition-all disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-3 px-6 rounded-lg font-medium shadow-md hover:shadow-lg"
+        >
+          {loading ? "Redirecting to BigCommerce..." : "Install App"}
+        </button>
 
         <p className="text-xs text-gray-400 mt-6">
           By installing, you agree to our{" "}
-          <a href="/terms" className="underline hover:text-gray-500">
+          <a href="/terms" className="underline hover:text-gray-600 font-medium">
             Terms of Service
           </a>
           .

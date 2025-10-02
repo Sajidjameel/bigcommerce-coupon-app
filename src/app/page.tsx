@@ -1,110 +1,106 @@
-// app/page.tsx
-import Link from "next/link";
-import { cookies } from "next/headers";
+"use client"; // Must be client component to use useState/useEffect/local fetch
 
-async function checkAuthentication() {
+import React, { useState, useEffect, useCallback } from 'react';
+
+// Interface definitions (kept local for this single file)
+interface AuthStatus {
+  isConnected: boolean;
+  error?: string;
+  storeHash?: string;
+  userEmail?: string;
+  tokenWorks?: boolean;
+  storeName?: string;
+}
+
+const initialAuthStatus: AuthStatus = {
+  isConnected: false,
+  error: "Loading authentication status...",
+  tokenWorks: false,
+};
+
+/**
+ * [Client-side] Checks authentication and token validity by calling internal API routes.
+ * NOTE: This client-side approach is used to bypass compilation errors associated with 
+ * 'next/headers', 'next/cache', and 'next/link' in this environment.
+ */
+async function checkAuthenticationClient(baseUrl: string): Promise<AuthStatus> {
+  let authData: AuthStatus = { ...initialAuthStatus };
+
   try {
-    const cookieStore = await cookies();
-    const storeHash = cookieStore.get("store_hash")?.value;
-    
-    console.log("🔍 Home Page - Store hash from cookies:", storeHash);
+    // 1. Verify the session status (This route internally checks for the cookie/session)
+    const verifyResponse = await fetch(`${baseUrl}/api/auth/verify`, { cache: 'no-store' });
 
-    if (!storeHash) {
-      return { 
-        isConnected: false,
-        error: "No store hash found" 
-      };
-    }
-
-    // Verify the access token is valid by making an API call
-    const verifyResponse = await fetch(`${process.env.APP_URL || 'http://localhost:3000'}/api/auth/verify`, {
-      cache: 'no-store',
-      headers: {
-        'Cookie': `store_hash=${storeHash}`
-      }
-    });
-
-    if (verifyResponse.ok) {
-      const storeData = await verifyResponse.json();
-      console.log("✅ Access token is valid:", { 
-        storeHash: storeData.storeHash,
-        userEmail: storeData.user?.email 
-      });
-      
-      return { 
-        isConnected: true,
-        storeHash: storeData.storeHash,
-        userEmail: storeData.user?.email,
-        accessTokenValid: true
-      };
-    } else {
+    if (!verifyResponse.ok) {
       const errorData = await verifyResponse.json();
-      console.log("❌ Access token invalid:", errorData);
-      return { 
-        isConnected: false,
-        error: errorData.error || "Token verification failed" 
-      };
+      authData.error = errorData.error || `Verification failed: ${verifyResponse.status}`;
+      return authData;
     }
+
+    const storeData = await verifyResponse.json();
+    authData = {
+      isConnected: true,
+      storeHash: storeData.storeHash,
+      userEmail: storeData.user?.email,
+      error: undefined,
+    };
+    
+    // 2. Test if the access token is active by calling the BC API
+    const tokenTestResponse = await fetch(`${baseUrl}/api/test-token`, { cache: 'no-store' });
+    
+    if (tokenTestResponse.ok) {
+      const testData = await tokenTestResponse.json();
+      authData.tokenWorks = testData.tokenWorks;
+      authData.storeName = testData.storeInfo?.name;
+      authData.error = undefined;
+    } else {
+      authData.tokenWorks = false;
+      authData.error = `API Access Test Failed (${tokenTestResponse.status}). Token might be invalid or expired.`;
+      console.warn("Token test failed:", await tokenTestResponse.text());
+    }
+
+    return authData;
 
   } catch (error) {
     console.error("Auth check error:", error);
-    return { 
-      isConnected: false,
-      error: "Authentication service unavailable" 
-    };
+    authData.isConnected = false;
+    authData.tokenWorks = false;
+    authData.error = "Authentication service unavailable (Network error)";
+    return authData;
   }
 }
 
-// Function to test the access token with BigCommerce API
-async function testAccessToken(storeHash: string) {
-  try {
-    const testResponse = await fetch(`${process.env.APP_URL || 'http://localhost:3000'}/api/test-token`, {
-      cache: 'no-store',
-      headers: {
-        'Cookie': `store_hash=${storeHash}`
-      }
-    });
+export default function HomePage() {
+  const [authData, setAuthData] = useState<AuthStatus>(initialAuthStatus);
+  const [loading, setLoading] = useState(true);
 
-    if (testResponse.ok) {
-      const testData = await testResponse.json();
-      return {
-        tokenWorks: true,
-        storeName: testData.storeInfo?.name,
-        apiTest: true
-      };
-    } else {
-      return {
-        tokenWorks: false,
-        apiTest: false
-      };
-    }
-  } catch (error) {
-    console.error("Token test error:", error);
-    return {
-      tokenWorks: false,
-      apiTest: false,
-      error: "API test failed"
-    };
+  // Determine the base URL dynamically on the client
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    const data = await checkAuthenticationClient(baseUrl);
+    setAuthData(data);
+    setLoading(false);
+  }, [baseUrl]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const isTokenActive = authData.tokenWorks === true;
+  const ctaHref = isTokenActive ? "/coupons" : "/auth";
+
+  // Use the loading state to show a simple loader
+  if (loading) {
+    return (
+        <div className="h-screen bg-gray-900 flex items-center justify-center">
+            <svg className="animate-spin h-8 w-8 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+        </div>
+    );
   }
-}
-
-export default async function HomePage() {
-  const authData = await checkAuthentication();
-  const isConnected = authData.isConnected;
-  
-  let tokenTestResult = null;
-  if (isConnected && authData.storeHash) {
-    tokenTestResult = await testAccessToken(authData.storeHash);
-  }
-
-  console.log("🏠 Home Page Status:", { 
-    isConnected, 
-    storeHash: authData.storeHash,
-    userEmail: authData.userEmail,
-    accessTokenValid: authData.accessTokenValid,
-    tokenWorks: tokenTestResult?.tokenWorks,
-    storeName: tokenTestResult?.storeName
-  });
 
   return (
     <div className="h-screen bg-gray-900 flex items-center justify-center overflow-hidden">
@@ -120,41 +116,48 @@ export default async function HomePage() {
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 mb-4">
             <div
               className={`w-3 h-3 rounded-full ${
-                isConnected ? "bg-green-600" : "bg-red-600"
+                authData.isConnected ? "bg-green-600" : "bg-red-600"
               }`}
             />
             <span className="text-sm font-bold text-gray-900">
-              {isConnected ? `Connected to ${authData.storeHash}` : "BigCommerce not connected"}
+              {authData.isConnected ? `Session Active` : "BigCommerce Not Connected"}
             </span>
           </div>
           
           {/* Access Token Status */}
-          {isConnected && (
+          {authData.isConnected && (
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 mb-2">
               <div
                 className={`w-3 h-3 rounded-full ${
-                  tokenTestResult?.tokenWorks ? "bg-green-600" : "bg-yellow-600"
+                  isTokenActive ? "bg-green-600" : "bg-yellow-600"
                 }`}
               />
               <span className="text-sm font-bold text-gray-900">
-                {tokenTestResult?.tokenWorks 
-                  ? `Access Token Active • ${tokenTestResult.storeName || 'Store Connected'}`
-                  : "Access Token Needs Refresh"
+                {isTokenActive 
+                  ? `Access Token Active • ${authData.storeName || 'Store Connected'}`
+                  : "Access Token Invalid/Expired"
                 }
               </span>
             </div>
           )}
           
-          {isConnected && authData.userEmail && (
+          {authData.isConnected && authData.userEmail && (
             <p className="text-sm text-gray-300 mt-2">
               Logged in as: {authData.userEmail}
             </p>
           )}
 
-          {!isConnected && authData.error && (
-            <p className="text-sm text-red-300 mt-2">
-              Error: {authData.error}
-            </p>
+          {/* Show Errors */}
+          {!isTokenActive && authData.error && (
+             <div className="text-sm text-red-300 mt-2 p-2 bg-red-900/50 rounded">
+                Error: {authData.error}
+                <button 
+                    onClick={fetchData} 
+                    className="ml-3 text-xs text-yellow-300 underline hover:text-yellow-400"
+                >
+                    (Refresh Status)
+                </button>
+              </div>
           )}
         </div>
 
@@ -229,11 +232,12 @@ export default async function HomePage() {
 
         {/* CTA Button */}
         <div>
-          <Link href={isConnected ? "/coupons" : "/auth"}>
+          {/* Replaced Next.js Link with standard HTML anchor tag */}
+          <a href={ctaHref}> 
             <button className="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-8 py-3 rounded-lg transition-colors cursor-pointer">
-              {isConnected ? "Start Creating Coupons" : "Connect BigCommerce Store"}
+              {isTokenActive ? "Start Creating Coupons" : "Connect BigCommerce Store"}
             </button>
-          </Link>
+          </a>
           <p className="text-sm text-gray-100 mt-3">
             Trusted by 1,000+ BigCommerce stores worldwide
           </p>

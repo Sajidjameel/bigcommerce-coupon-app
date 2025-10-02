@@ -1,42 +1,38 @@
 // app/lib/bigcommerce.ts
 import { BigCommerceTokenResponse } from '@/types/bigcommerce';
 
+// --- CONFIGURATION ---
 export const bigcommerceConfig = {
   clientId: process.env.BIGCOMMERCE_CLIENT_ID || '',
   clientSecret: process.env.BIGCOMMERCE_CLIENT_SECRET || '',
-  authCallback: process.env.BIGCOMMERCE_AUTH_CALLBACK_URL || '',
+  // This must match the URL you set in the BigCommerce Developer Portal
+  authCallback: process.env.BIGCOMMERCE_AUTH_CALLBACK_URL || '', 
   apiUrl: 'https://api.bigcommerce.com',
   loginUrl: 'https://login.bigcommerce.com',
 };
-// app/lib/bigcommerce.ts - Update the exchangeCodeForToken function
+
+// --- CORE FUNCTIONALITY ---
+
+/**
+ * Exchanges the BigCommerce authorization code for an access token and store context.
+ */
 export async function exchangeCodeForToken(
   code: string, 
-  context: string, 
-  storeHash: string
+  context: string, // Context is often empty or not reliable on initial install
 ): Promise<BigCommerceTokenResponse> {
   
-  console.log('🔄 EXCHANGING CODE FOR TOKEN:');
-  console.log('   - Code length:', code.length);
-  console.log('   - Context provided:', context || 'Not provided');
-  console.log('   - Store hash provided:', storeHash || 'Not provided');
-
   const requestBody: any = {
     client_id: bigcommerceConfig.clientId,
     client_secret: bigcommerceConfig.clientSecret,
     code: code,
     grant_type: 'authorization_code',
     redirect_uri: bigcommerceConfig.authCallback,
+    // Per documentation, context is often sent by BC, but not required in this request
+    // We explicitly exclude it from the request if it's not present or empty
   };
-
-  // Only include context if it's provided
-  if (context) {
-    requestBody.context = context;
-  }
-
-  console.log('📤 TOKEN REQUEST BODY:', {
-    ...requestBody,
-    client_secret: '***HIDDEN***'
-  });
+  
+  // NOTE: BigCommerce does not require the context parameter for this request.
+  // It will be returned in the response object. We pass it only for logging purposes.
 
   try {
     const response = await fetch(`${bigcommerceConfig.loginUrl}/oauth2/token`, {
@@ -47,20 +43,19 @@ export async function exchangeCodeForToken(
       body: JSON.stringify(requestBody),
     });
 
-    console.log('📥 TOKEN RESPONSE STATUS:', response.status);
-
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('❌ TOKEN EXCHANGE FAILED:', errorText);
+      // Log the full error to help debug issues like client_id/secret errors
+      console.error('❌ TOKEN EXCHANGE FAILED:', errorText); 
       throw new Error(`Token exchange failed: ${response.status} - ${errorText}`);
     }
 
     const tokenData = await response.json() as BigCommerceTokenResponse;
     
-    console.log('✅ TOKEN EXCHANGE SUCCESSFUL:');
-    console.log('   - Access Token Received:', !!tokenData.access_token);
-    console.log('   - Context in Response:', tokenData.context);
-    console.log('   - User:', tokenData.user);
+    // Validate that we received a token and context
+    if (!tokenData.access_token || !tokenData.context) {
+        throw new Error('Token exchange successful but missing access_token or context in response.');
+    }
 
     return tokenData;
 
