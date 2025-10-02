@@ -1,4 +1,3 @@
-// app/auth/page.tsx
 "use client";
 
 import Image from "next/image";
@@ -14,10 +13,11 @@ export default function AuthPage() {
     const storeHashFromUrl = urlParams.get('store_hash');
     const contextFromUrl = urlParams.get('context');
     
-    console.log('Auto-detecting store hash from URL parameters:');
+    console.log('🔍 Auto-detecting store hash from URL parameters:');
     console.log('   - store_hash:', storeHashFromUrl);
     console.log('   - context:', contextFromUrl);
 
+    // Extract store hash from context (format: stores/{store_hash})
     let extractedStoreHash = storeHashFromUrl;
     if (contextFromUrl && contextFromUrl.startsWith('stores/')) {
       extractedStoreHash = contextFromUrl.replace('stores/', '');
@@ -31,7 +31,6 @@ export default function AuthPage() {
       handleLogin(extractedStoreHash);
     } else {
       console.log('❌ No store hash detected in URL parameters');
-      console.log('   This is normal for direct access. User will click Install button.');
     }
   }, []);
 
@@ -39,15 +38,13 @@ export default function AuthPage() {
     setLoading(true);
     
     try {
-      // Use the detected store hash or proceed without it
-      // BigCommerce will provide the store hash in the OAuth callback if not provided here
       let apiUrl = '/api/auth/install';
       
       if (detectedStoreHash) {
         apiUrl += `?store_hash=${encodeURIComponent(detectedStoreHash)}`;
         console.log('🚀 Starting OAuth with store hash:', detectedStoreHash);
       } else {
-        console.log('🚀 Starting OAuth without store hash (will be provided by BigCommerce)');
+        console.log('🚀 Starting OAuth without store hash');
       }
       
       const res = await fetch(apiUrl);
@@ -61,6 +58,7 @@ export default function AuthPage() {
       console.log('✅ Redirect URL received:', data.url);
       
       if (data.url) {
+        // Redirect to BigCommerce OAuth
         window.location.href = data.url;
       } else {
         throw new Error('No redirect URL received from server');
@@ -76,7 +74,7 @@ export default function AuthPage() {
 
   const handleManualInstall = () => {
     console.log('👤 User manually clicked Install button');
-    handleLogin(); // Call without store hash - BigCommerce will provide it
+    handleLogin(); // Call without store hash
   };
 
   return (

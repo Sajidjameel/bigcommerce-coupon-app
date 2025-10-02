@@ -12,51 +12,55 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   // Get the stored state from cookies
   const storedState = request.cookies.get('oauth_state')?.value;
 
-  console.log('🔐 CALLBACK TRIGGERED - Checking parameters:');
-  console.log('   - Code:', code ? '✅ Present' : '❌ Missing');
-  console.log('   - Context:', context || '❌ Missing');
-  console.log('   - State:', state || '❌ Missing');
-  console.log('   - Stored State:', storedState ? '✅ Present' : '❌ Missing');
-  console.log('   - Scope:', scope || '❌ Missing');
+  console.log('🔐 CALLBACK TRIGGERED - Detailed parameter check:');
+  console.log('   - Code present:', !!code, code ? `${code.substring(0, 10)}...` : 'NO CODE');
+  console.log('   - Context:', context || 'NO CONTEXT');
+  console.log('   - State from URL:', state || 'NO STATE IN URL');
+  console.log('   - State from cookie:', storedState || 'NO STATE IN COOKIE');
+  console.log('   - Scope:', scope || 'NO SCOPE');
+  console.log('   - All cookies:', request.cookies.getAll());
 
-  if (!code || !context || !state || state !== storedState) {
-    console.error('❌ AUTH FAILED: Invalid parameters');
-    console.error('   Code present:', !!code);
-    console.error('   Context present:', !!context);
-    console.error('   State matches:', state === storedState);
-    return NextResponse.json(
-      { error: 'Invalid authentication request' }, 
-      { status: 400 }
-    );
+  // Enhanced state validation with detailed error messages
+  if (!code) {
+    console.error('❌ MISSING AUTHORIZATION CODE');
+    return NextResponse.json({ error: 'Missing authorization code' }, { status: 400 });
+  }
+
+  if (!context) {
+    console.error('❌ MISSING CONTEXT PARAMETER');
+    return NextResponse.json({ error: 'Missing context parameter' }, { status: 400 });
+  }
+
+  if (!state || !storedState) {
+    console.error('❌ MISSING STATE PARAMETER');
+    console.error('   - State in URL:', state);
+    console.error('   - State in cookie:', storedState);
+    return NextResponse.json({ error: 'Missing state parameter' }, { status: 400 });
+  }
+
+  if (state !== storedState) {
+    console.error('❌ STATE MISMATCH');
+    console.error('   - URL State:', state);
+    console.error('   - Cookie State:', storedState);
+    console.error('   - Match:', state === storedState);
+    return NextResponse.json({ error: 'State parameter mismatch' }, { status: 400 });
   }
 
   try {
     console.log('🔄 STEP 1: Exchanging authorization code for access token...');
-    console.log('   - Authorization Code:', code.substring(0, 10) + '...');
-    console.log('   - Context:', context);
     
     // Exchange authorization code for access token
     const tokenData = await exchangeCodeForToken(code, context, context);
     
     console.log('✅ STEP 1 COMPLETE: Token received from BigCommerce!');
-    console.log('   - Access Token:', tokenData.access_token);
-    console.log('   - Token Length:', tokenData.access_token.length);
-    console.log('   - Scopes:', tokenData.scope);
-    console.log('   - User ID:', tokenData.user?.id);
-    console.log('   - User Email:', tokenData.user?.email);
-    console.log('   - Context:', tokenData.context);
     
     // Extract store hash from context (format: stores/{store_hash})
     const storeHash = context.replace('stores/', '');
     console.log('📦 STEP 2: Extracted store hash:', storeHash);
 
     // Store the access token and store data in Upstash Redis
-    const scopes = scope ? scope.split(',') : [];
+    const scopes = scope ? scope.split(' ') : []; // BigCommerce uses space separation
     console.log('💾 STEP 3: Saving to Upstash Redis...');
-    console.log('   - Store Hash:', storeHash);
-    console.log('   - Access Token:', tokenData.access_token.substring(0, 20) + '...');
-    console.log('   - User:', tokenData.user);
-    console.log('   - Scopes:', scopes);
 
     const savedData = await saveStoreData(
       storeHash, 
@@ -69,7 +73,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     );
 
     console.log('✅ STEP 3 COMPLETE: Data saved to Upstash!');
-    console.log('   - Saved Data:', JSON.stringify(savedData, null, 2));
 
     // Redirect to app dashboard
     const redirectUrl = `${request.nextUrl.origin}/dashboard`;
@@ -77,7 +80,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     const response = NextResponse.redirect(redirectUrl);
     
-    // Clear the OAuth cookies
+    // Clear the OAuth cookie
     response.cookies.delete('oauth_state');
     
     // Set session cookie with store hash
@@ -86,20 +89,14 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 60 * 60 * 24, // 24 hours
+      path: '/',
     });
 
     console.log('🎉 AUTH FLOW COMPLETED SUCCESSFULLY!');
-    console.log('   - Store Hash Cookie Set:', storeHash);
-    console.log('   - Redirecting to:', redirectUrl);
-
     return response;
 
   } catch (error) {
     console.error('❌ AUTH CALLBACK ERROR:', error);
-    console.error('   Error details:', error instanceof Error ? error.message : 'Unknown error');
-    return NextResponse.json(
-      { error: 'Authentication failed' }, 
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Authentication failed' }, { status: 500 });
   }
 }
