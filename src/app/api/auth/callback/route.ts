@@ -9,15 +9,16 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const context = searchParams.get('context');
   const state = searchParams.get('state');
   const scope = searchParams.get('scope');
+  const account_uuid = searchParams.get('account_uuid');
 
   console.log('🔐 CALLBACK TRIGGERED - BigCommerce OAuth:');
   console.log('   - Code:', code ? `✅ Present (${code.length} chars)` : '❌ Missing');
-  console.log('   - Context:', context || '❌ Missing');
-  console.log('   - State:', state || '⚠️ Optional');
+  console.log('   - Context:', context || '⚠️ Not provided by BigCommerce');
+  console.log('   - Account UUID:', account_uuid || 'Not provided');
   console.log('   - Scope:', scope || 'No scope');
   console.log('   - Full URL:', request.url);
 
-  // Validate required parameters
+  // Validate required parameters - ONLY code is absolutely required
   if (!code) {
     console.error('❌ MISSING AUTHORIZATION CODE');
     return NextResponse.json({ 
@@ -25,31 +26,48 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }, { status: 400 });
   }
 
-  if (!context) {
-    console.error('❌ MISSING CONTEXT PARAMETER');
-    return NextResponse.json({ 
-      error: 'Missing context parameter' 
-    }, { status: 400 });
-  }
-
   try {
     console.log('🔄 STEP 1: Exchanging authorization code for access token...');
     
+    // If context is not provided, we need to handle this differently
+    let storeHash = '';
+    
+    if (context) {
+      // Extract store hash from context (format: stores/{store_hash})
+      storeHash = context.replace('stores/', '');
+      console.log('📦 Store hash from context:', storeHash);
+    } else {
+      console.log('⚠️ No context provided - BigCommerce will provide store hash in token response');
+      // We'll get the store hash from the token exchange response
+    }
+    
     // Exchange authorization code for access token
-    const tokenData = await exchangeCodeForToken(code, context, context);
+    const tokenData = await exchangeCodeForToken(code, context || '', storeHash);
     
     console.log('✅ STEP 1 COMPLETE: Token received successfully!');
+    console.log('   - Access Token Length:', tokenData.access_token?.length);
+    console.log('   - User:', tokenData.user);
+    console.log('   - Token Context:', tokenData.context);
     
-    // Extract store hash from context (format: stores/{store_hash})
-    const storeHash = context.replace('stores/', '');
-    console.log('📦 STEP 2: Extracted store hash:', storeHash);
+    // If we didn't get store hash from context, get it from token response
+    if (!storeHash && tokenData.context) {
+      storeHash = tokenData.context.replace('stores/', '');
+      console.log('📦 Store hash from token response:', storeHash);
+    }
+    
+    // If we still don't have store hash, we can't proceed
+    if (!storeHash) {
+      console.error('❌ COULD NOT EXTRACT STORE HASH');
+      return NextResponse.json({ 
+        error: 'Could not determine store hash' 
+      }, { status: 400 });
+    }
 
     // Store the access token and store data in Upstash Redis
     const scopes = scope ? scope.split(' ') : [];
     console.log('💾 STEP 3: Saving to Upstash Redis...');
     console.log('   - Store Hash:', storeHash);
     console.log('   - Scopes:', scopes);
-    console.log('   - User:', tokenData.user);
 
     const savedData = await saveStoreData(
       storeHash, 
@@ -65,9 +83,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     console.log('   - Saved store hash:', savedData.storeHash);
     console.log('   - Saved user email:', savedData.user.email);
 
-    // Redirect to app dashboard
+    // Redirect to home page
     const redirectUrl = `${request.nextUrl.origin}/`;
-    console.log('🔄 STEP 4: Redirecting to dashboard:', redirectUrl);
+    console.log('🔄 STEP 4: Redirecting to home page:', redirectUrl);
 
     const response = NextResponse.redirect(redirectUrl);
     
@@ -93,7 +111,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (error instanceof Error) {
       console.error('   - Error name:', error.name);
       console.error('   - Error message:', error.message);
-      console.error('   - Error stack:', error.stack);
       
       // Specific error handling
       if (error.message.includes('client_id') || error.message.includes('client_secret')) {
@@ -116,8 +133,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           error: 'Invalid authorization code. The code may have expired or been used already.' 
         }, { status: 400 });
       }
-    } else {
-      console.error('   - Unknown error type:', error);
     }
     
     return NextResponse.json({ 
