@@ -1,6 +1,6 @@
 "use client"; // Must be client component to use useState/useEffect/local fetch
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 
 // Interface definitions (kept local for this single file)
 interface AuthStatus {
@@ -18,74 +18,12 @@ const initialAuthStatus: AuthStatus = {
   tokenWorks: false,
 };
 
-/**
- * [Client-side] Checks authentication and token validity by calling internal API routes.
- * NOTE: This client-side approach is used to bypass compilation errors associated with 
- * 'next/headers', 'next/cache', and 'next/link' in this environment.
- */
-async function checkAuthenticationClient(baseUrl: string): Promise<AuthStatus> {
-  let authData: AuthStatus = { ...initialAuthStatus };
-
-  try {
-    // 1. Verify the session status (This route internally checks for the cookie/session)
-    const verifyResponse = await fetch(`${baseUrl}/api/auth/verify`, { cache: 'no-store' });
-
-    if (!verifyResponse.ok) {
-      const errorData = await verifyResponse.json();
-      authData.error = errorData.error || `Verification failed: ${verifyResponse.status}`;
-      return authData;
-    }
-
-    const storeData = await verifyResponse.json();
-    authData = {
-      isConnected: true,
-      storeHash: storeData.storeHash,
-      userEmail: storeData.user?.email,
-      error: undefined,
-    };
-    
-    // 2. Test if the access token is active by calling the BC API
-    const tokenTestResponse = await fetch(`${baseUrl}/api/test-token`, { cache: 'no-store' });
-    
-    if (tokenTestResponse.ok) {
-      const testData = await tokenTestResponse.json();
-      authData.tokenWorks = testData.tokenWorks;
-      authData.storeName = testData.storeInfo?.name;
-      authData.error = undefined;
-    } else {
-      authData.tokenWorks = false;
-      authData.error = `API Access Test Failed (${tokenTestResponse.status}). Token might be invalid or expired.`;
-      console.warn("Token test failed:", await tokenTestResponse.text());
-    }
-
-    return authData;
-
-  } catch (error) {
-    console.error("Auth check error:", error);
-    authData.isConnected = false;
-    authData.tokenWorks = false;
-    authData.error = "Authentication service unavailable (Network error)";
-    return authData;
-  }
-}
 
 export default function HomePage() {
   const [authData, setAuthData] = useState<AuthStatus>(initialAuthStatus);
   const [loading, setLoading] = useState(true);
 
   // Determine the base URL dynamically on the client
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    const data = await checkAuthenticationClient(baseUrl);
-    setAuthData(data);
-    setLoading(false);
-  }, [baseUrl]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
 
   const isTokenActive = authData.tokenWorks === true;
   const ctaHref = isTokenActive ? "/coupons" : "/auth";
@@ -152,7 +90,6 @@ export default function HomePage() {
              <div className="text-sm text-red-300 mt-2 p-2 bg-red-900/50 rounded">
                 Error: {authData.error}
                 <button 
-                    onClick={fetchData} 
                     className="ml-3 text-xs text-yellow-300 underline hover:text-yellow-400"
                 >
                     (Refresh Status)

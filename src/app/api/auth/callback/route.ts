@@ -1,7 +1,6 @@
 // app/api/auth/callback/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { exchangeCodeForToken } from '@/app/lib/bigcommerce';
-import { saveStoreData } from '@/app/lib/db';
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const { searchParams } = new URL(request.url);
@@ -26,7 +25,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     // The actual storeHash is reliably extracted from the tokenData.context.
     const tokenData = await exchangeCodeForToken(code, context || '');
     
-    console.log('✅ STEP 1 COMPLETE: Token received successfully!');
+    console.log('✅ STEP 1 COMPLETE: Token received successfully!', tokenData);
     
     // STEP 2: Extract the Store Hash from the token response
     // Format is always 'stores/{store_hash}'
@@ -40,22 +39,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
     
     console.log('📦 Store hash successfully extracted:', storeHash);
-
-    // STEP 3: Store the access token and store data in DB
-    const scopes = scope ? scope.split(' ') : [];
-    console.log('💾 STEP 3: Saving store data...');
-
-    await saveStoreData(
-      storeHash, 
-      tokenData.access_token, 
-      {
-        id: tokenData.user.id,
-        email: tokenData.user.email,
-      }, 
-      scopes
-    );
-
-    console.log('✅ STEP 3 COMPLETE: Data saved!');
 
     // STEP 4: Redirect to home page and set cookie
     const redirectUrl = `${request.nextUrl.origin}/`;

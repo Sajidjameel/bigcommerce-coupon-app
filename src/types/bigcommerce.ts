@@ -30,17 +30,3 @@ export interface StoreData {
   installedAt: string; // ISO date string
   updatedAt: string; // ISO date string
 }
-
-/**
- * Interface for the response from your /api/auth/verify route.
- */
-export interface AuthLoadResponse {
-  storeHash: string;
-  user: {
-    id: number;
-    email: string;
-  };
-  installedAt: string;
-  scopes: string[];
-  hasAccessToken?: boolean;
-}
