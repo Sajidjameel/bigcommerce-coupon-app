@@ -18,7 +18,6 @@ export const bigcommerceConfig = {
  */
 export async function exchangeCodeForToken(
   code: string, 
-  context: string, // Context is often empty or not reliable on initial install
 ): Promise<BigCommerceTokenResponse> {
   
   const requestBody: any = {
@@ -27,13 +26,10 @@ export async function exchangeCodeForToken(
     code: code,
     grant_type: 'authorization_code',
     redirect_uri: bigcommerceConfig.authCallback,
-    // Per documentation, context is often sent by BC, but not required in this request
-    // We explicitly exclude it from the request if it's not present or empty
   };
   
   // NOTE: BigCommerce does not require the context parameter for this request.
   // It will be returned in the response object. We pass it only for logging purposes.
-
   try {
     const response = await fetch(`${bigcommerceConfig.loginUrl}/oauth2/token`, {
       method: 'POST',

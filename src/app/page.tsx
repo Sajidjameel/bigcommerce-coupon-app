@@ -1,44 +1,17 @@
 "use client"; // Must be client component to use useState/useEffect/local fetch
 
-import React, { useState } from 'react';
-
-// Interface definitions (kept local for this single file)
-interface AuthStatus {
-  isConnected: boolean;
-  error?: string;
-  storeHash?: string;
-  userEmail?: string;
-  tokenWorks?: boolean;
-  storeName?: string;
-}
-
-const initialAuthStatus: AuthStatus = {
-  isConnected: false,
-  error: "Loading authentication status...",
-  tokenWorks: false,
-};
-
+import { useSearchParams } from 'next/navigation';
+import React from 'react';
 
 export default function HomePage() {
-  const [authData, setAuthData] = useState<AuthStatus>(initialAuthStatus);
-  const [loading, setLoading] = useState(true);
+
+  const searchParams = useSearchParams();
+
+  const storehash = searchParams.get("storehash");
+  const token = searchParams.get("token");
 
   // Determine the base URL dynamically on the client
-
-  const isTokenActive = authData.tokenWorks === true;
-  const ctaHref = isTokenActive ? "/coupons" : "/auth";
-
-  // Use the loading state to show a simple loader
-  if (loading) {
-    return (
-        <div className="h-screen bg-gray-900 flex items-center justify-center">
-            <svg className="animate-spin h-8 w-8 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-        </div>
-    );
-  }
+  const ctaHref = token ? "/coupons" : "/auth";
 
   return (
     <div className="h-screen bg-gray-900 flex items-center justify-center overflow-hidden">
@@ -54,48 +27,13 @@ export default function HomePage() {
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 mb-4">
             <div
               className={`w-3 h-3 rounded-full ${
-                authData.isConnected ? "bg-green-600" : "bg-red-600"
+                token ? "bg-green-600" : "bg-red-600"
               }`}
             />
             <span className="text-sm font-bold text-gray-900">
-              {authData.isConnected ? `Session Active` : "BigCommerce Not Connected"}
+              {token ? `Session Active for store ${storehash}` : "BigCommerce Not Connected"}
             </span>
           </div>
-          
-          {/* Access Token Status */}
-          {authData.isConnected && (
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 mb-2">
-              <div
-                className={`w-3 h-3 rounded-full ${
-                  isTokenActive ? "bg-green-600" : "bg-yellow-600"
-                }`}
-              />
-              <span className="text-sm font-bold text-gray-900">
-                {isTokenActive 
-                  ? `Access Token Active • ${authData.storeName || 'Store Connected'}`
-                  : "Access Token Invalid/Expired"
-                }
-              </span>
-            </div>
-          )}
-          
-          {authData.isConnected && authData.userEmail && (
-            <p className="text-sm text-gray-300 mt-2">
-              Logged in as: {authData.userEmail}
-            </p>
-          )}
-
-          {/* Show Errors */}
-          {!isTokenActive && authData.error && (
-             <div className="text-sm text-red-300 mt-2 p-2 bg-red-900/50 rounded">
-                Error: {authData.error}
-                <button 
-                    className="ml-3 text-xs text-yellow-300 underline hover:text-yellow-400"
-                >
-                    (Refresh Status)
-                </button>
-              </div>
-          )}
         </div>
 
         {/* Benefits Grid */}
@@ -172,7 +110,7 @@ export default function HomePage() {
           {/* Replaced Next.js Link with standard HTML anchor tag */}
           <a href={ctaHref}> 
             <button className="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-8 py-3 rounded-lg transition-colors cursor-pointer">
-              {isTokenActive ? "Start Creating Coupons" : "Connect BigCommerce Store"}
+              {token ? "Start Creating Coupons" : "Connect BigCommerce Store"}
             </button>
           </a>
           <p className="text-sm text-gray-100 mt-3">
