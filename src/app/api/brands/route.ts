@@ -2,18 +2,6 @@
 import { NextResponse } from 'next/server'
 
 export async function GET() {
-  const BIGCOMMERCE_STORE_HASH = process.env.BIGCOMMERCE_STORE_HASH
-  const BIGCOMMERCE_ACCESS_TOKEN = process.env.BIGCOMMERCE_ACCESS_TOKEN
-
- 
-
-  if (!BIGCOMMERCE_STORE_HASH || !BIGCOMMERCE_ACCESS_TOKEN) {
-    console.error('MISSING CREDENTIALS ERROR')
-    return NextResponse.json(
-      { error: "Missing BigCommerce credentials" },
-      { status: 500 }
-    )
-  }
 
   const url = `https://api.bigcommerce.com/stores/${BIGCOMMERCE_STORE_HASH}/v3/catalog/brands?sort=name&limit=50`
  // console.log('API URL:', url)

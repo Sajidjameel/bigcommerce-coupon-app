@@ -6,7 +6,6 @@ import Targeting from "./targeting/page";
 import Rules from "./rules/page";
 import UsageLimits from "./usage-limits/page";
 import Input from "@/components/UI/Input";
-import { useEffect, useRef } from "react";
 import React from "react"
 import ExcelJS from "exceljs"
 import { Download } from "lucide-react"
@@ -29,6 +28,8 @@ export default function CouponGenerator() {
         estimatedTime
     } = useCouponContext();
 
+
+
     const handleCheckboxChange = (channelId: number) => {
         const id = channelId.toString();
         if (channelId === 0) return;
@@ -49,13 +50,6 @@ export default function CouponGenerator() {
             setSelectedChannelIds([]);
         }
     };
-
-
-
-    useEffect(() => {
-        console.log("Updated selectedChannelIds:", selectedChannelIds);
-    }, [selectedChannelIds]);
-
 
     const handleDownload = async () => {
         // 1. Create workbook and worksheet
