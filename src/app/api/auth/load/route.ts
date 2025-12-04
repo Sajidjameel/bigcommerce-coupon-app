@@ -1,53 +1,71 @@
 // app/api/auth/callback/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
 import crypto from 'crypto';
+import { createClient } from '@/utils/supabase/server';
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
+  try {
+    const supabase = await createClient();
 
-  const { searchParams } = new URL(request.url)
-  const signedRequest = searchParams.get('signed_payload') 
-  try{
-    const supabase = await createClient()
+    const { searchParams } = new URL(request.url);
+    const signedRequest = searchParams.get('signed_payload');
 
     if (!signedRequest) {
-      throw new Error('The signed request is required to verify the call.');
+      throw new Error('Missing signed payload.');
     }
 
-    const splitRequest = signedRequest.split('.');
-    if (splitRequest.length < 2) {
-      throw new Error(
-        'The signed request will come in two parts seperated by a .(full stop). ' +
-        'this signed request contains less than 2 parts.'
-      );
+    // Split into JSON + signature
+    const [encodedJson, encodedSignature] = signedRequest.split('.');
+
+    if (!encodedJson || !encodedSignature) {
+      throw new Error('Invalid signed payload format.');
     }
 
-    const signature = Buffer.from(splitRequest[1], 'base64').toString('utf8');
-    const json = Buffer.from(splitRequest[0], 'base64').toString('utf8');
+    const json = Buffer.from(encodedJson, 'base64').toString();
+    const signature = Buffer.from(encodedSignature, 'base64').toString();
     const data = JSON.parse(json);
 
-    const expected = crypto.createHmac('sha256', process.env.BIGCOMMERCE_CLIENT_SECRET!)
+    // Validate HMAC signature from BigCommerce
+    const expected = crypto
+      .createHmac('sha256', process.env.BIGCOMMERCE_CLIENT_SECRET!)
       .update(json)
       .digest('hex');
 
-
-    if (expected.length !== signature.length ||
-      !crypto.timingSafeEqual(Buffer.from(expected, 'utf8'), Buffer.from(signature, 'utf8'))) {
-      throw new Error('Signature is invalid');
+    if (!crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature))) {
+      throw new Error('Invalid signature.');
     }
 
-    const {error} = await supabase.auth.signInWithPassword({email: data.user_email, password: `bc-${data.store_hash}-${data.user_email}`})
+    // At this point: LOAD request is valid
+    const storeHash = data.store_hash;
 
-    // STEP 4: Redirect to home page and set cookie
-    const redirectUrl = `${process.env.NEXT_AUTH_URL}?storehash=${data.store_hash}`;
-    NextResponse.redirect(redirectUrl);
+    // 🔍 Check if store exists in Supabase
+    const { data: storeRecord } = await supabase
+      .from('stores')
+      .select('*')
+      .eq('store_hash', storeHash)
+      .single();
 
-    return data;
-  }catch(er){
-    console.log(er)
-    return NextResponse.json({ 
-      error: 'Authentication failed. Please check app credentials and callback URL.', 
-      details: er instanceof Error ? er.message : 'Unknown error'
-    }, { status: 500 });
+    let redirectUrl;
+
+    if (storeRecord) {
+      // 🎉 Store installed → Allow access
+      redirectUrl = `${process.env.NEXT_AUTH_URL}?storehash=${storeHash}`;
+    } else {
+      // 🚫 Not installed → App must redirect without storehash
+      redirectUrl = `${process.env.NEXT_AUTH_URL}`;
+    }
+
+    return NextResponse.redirect(redirectUrl);
+
+  } catch (error) {
+    console.error('❌ LOAD callback error:', error);
+
+    return NextResponse.json(
+      {
+        error: 'Load endpoint failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    );
   }
 }

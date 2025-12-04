@@ -8,10 +8,10 @@ export default function HomePage() {
   const searchParams = useSearchParams();
 
   const storehash = searchParams.get("storehash");
-  const token = searchParams.get("token");
+  localStorage.setItem('storehash', storehash ?? '')
 
   // Determine the base URL dynamically on the client
-  const ctaHref = token ? "/coupons" : "/auth";
+  const ctaHref = storehash ? "/coupons" : "/auth";
 
   return (
     <div className="h-screen bg-gray-900 flex items-center justify-center overflow-hidden">
@@ -27,11 +27,11 @@ export default function HomePage() {
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 mb-4">
             <div
               className={`w-3 h-3 rounded-full ${
-                token ? "bg-green-600" : "bg-red-600"
+                storehash ? "bg-green-600" : "bg-red-600"
               }`}
             />
             <span className="text-sm font-bold text-gray-900">
-              {token ? `Session Active for store ${storehash}` : "BigCommerce Not Connected"}
+              {storehash ? `Session Active for store ${storehash}` : "BigCommerce Not Connected"}
             </span>
           </div>
         </div>
@@ -110,7 +110,7 @@ export default function HomePage() {
           {/* Replaced Next.js Link with standard HTML anchor tag */}
           <a href={ctaHref}> 
             <button className="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-8 py-3 rounded-lg transition-colors cursor-pointer">
-              {token ? "Start Creating Coupons" : "Connect BigCommerce Store"}
+              {storehash ? "Start Creating Coupons" : "Connect BigCommerce Store"}
             </button>
           </a>
           <p className="text-sm text-gray-100 mt-3">

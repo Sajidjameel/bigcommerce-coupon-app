@@ -4,39 +4,44 @@ import { exchangeCodeForToken } from '@/app/lib/bigcommerce';
 import { createClient } from '@/utils/supabase/server';
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  const { searchParams } = new URL(request.url);
-  const code = searchParams.get('code');
-  const context = searchParams.get('context'); // BigCommerce might provide this initially
-
   try {
-    const supabase = await createClient()
-    // STEP 1: Exchange authorization code for access token
-    const tokenData = await exchangeCodeForToken(code ?? '');
-        
-    // Format is always 'stores/{store_hash}'
+    const supabase = await createClient();
+
+    const { searchParams } = new URL(request.url);
+    const code = searchParams.get('code');
+
+    if (!code) {
+      return NextResponse.json({ error: 'Missing OAuth code' }, { status: 400 });
+    }
+
+    // 1️⃣ Exchange code for access token
+    const tokenData = await exchangeCodeForToken(code);
+
     const storeHash = tokenData.context.replace('stores/', '');
 
-    const email = tokenData.user.email;
+    // 2️⃣ Store token in Supabase keyed by store_hash
+    await supabase
+      .from('stores')
+      .upsert({
+        store_hash: storeHash,
+        access_token: tokenData.access_token,
+        scope: tokenData.scope,
+      });
 
-    // STEP 3: Try to sign in the user, otherwise create them
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password: `bc-${storeHash}-${email}`,
-    });
-    
-    // STEP 4: Redirect to home page and set cookie
-    const redirectUrl = `${process.env.NEXT_AUTH_URL}?storehash=${storeHash}&token=${tokenData.access_token}`;
-    const response = NextResponse.redirect(redirectUrl);
+    // 3️⃣ Redirect into your app
+    const redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}?storehash=${storeHash}`;
 
-    return response;
+    return NextResponse.redirect(redirectUrl);
 
   } catch (error) {
-    // Consolidated and improved error handling
-    console.error('❌ FINAL OAUTH CALLBACK ERROR:', error);
-    
-    return NextResponse.json({ 
-      error: 'Authentication failed. Please check app credentials and callback URL.', 
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    console.error("OAuth Callback Error:", error);
+
+    return NextResponse.json(
+      {
+        error: "OAuth callback failed",
+        details: error instanceof Error ? error.message : error,
+      },
+      { status: 500 }
+    );
   }
 }
